@@ -1,21 +1,17 @@
 {
   "name": "warehouse-returns-backend",
   "version": "1.0.0",
-  "description": "Бэкенд приложения Кладовщик: Яндекс.Диск + МойСклад",
   "main": "server.js",
+  "type": "module",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node --watch server.js"
+    "start": "node server.js"
   },
   "engines": {
     "node": ">=18"
   },
   "dependencies": {
-    "cors": "^2.8.5",
-    "dotenv": "^16.4.5",
     "express": "^4.19.2",
-    "form-data": "^4.0.0",
     "multer": "^1.4.5-lts.1",
-    "node-fetch": "^2.7.0"
+    "dotenv": "^16.4.5"
   }
 }
