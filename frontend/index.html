@@ -1,0 +1,1232 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Склад">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <title>Кладовщик · Возвраты</title>
+
+    <!-- Библиотека для сканирования штрихкодов -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --bg: #0a0a0a;
+            --bg-soft: #141414;
+            --bg-card: #1a1a1a;
+            --border: #2a2a2a;
+            --accent: #ff6b35;
+            --accent-glow: rgba(255, 107, 53, 0.15);
+            --success: #4ade80;
+            --error: #ef4444;
+            --warning: #fbbf24;
+            --text: #f5f5f5;
+            --text-dim: #888;
+            --text-mute: #555;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            overscroll-behavior: none;
+        }
+
+        body {
+            font-family: 'Manrope', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            font-size: 16px;
+            line-height: 1.5;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* Layout */
+        .app {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            height: 100dvh;
+            max-width: 480px;
+            margin: 0 auto;
+            background: var(--bg);
+        }
+
+        /* Header */
+        .header {
+            padding: 20px 20px 12px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .header-title {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--text-dim);
+        }
+
+        .header-title span {
+            color: var(--accent);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .status-dot.offline {
+            background: var(--error);
+            box-shadow: 0 0 8px var(--error);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        /* Main content */
+        .main {
+            flex: 1;
+            overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            padding: 24px 20px;
+        }
+
+        /* Step indicator */
+        .steps {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 32px;
+        }
+
+        .step {
+            flex: 1;
+            height: 3px;
+            background: var(--border);
+            border-radius: 2px;
+            transition: background 0.4s ease;
+        }
+
+        .step.active { background: var(--accent); }
+        .step.done { background: var(--success); }
+
+        /* Stage title */
+        .stage-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--text-mute);
+            margin-bottom: 8px;
+        }
+
+        .stage-title {
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            margin-bottom: 24px;
+            line-height: 1.1;
+        }
+
+        /* Card */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 16px;
+        }
+
+        .card-label {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--text-mute);
+            margin-bottom: 8px;
+        }
+
+        .card-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 18px;
+            font-weight: 500;
+            word-break: break-all;
+        }
+
+        /* Scanner */
+        #scanner-container {
+            position: relative;
+            background: #000;
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            aspect-ratio: 4 / 5;
+        }
+
+        #scanner-container video {
+            width: 100% !important;
+            height: 100% !important;
+            object-fit: cover;
+        }
+
+        .scanner-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+
+        .scanner-frame {
+            width: 75%;
+            aspect-ratio: 3 / 1;
+            border: 2px solid var(--accent);
+            border-radius: 8px;
+            box-shadow: 0 0 0 100vmax rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .scanner-frame::before,
+        .scanner-frame::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--accent);
+            box-shadow: 0 0 12px var(--accent);
+        }
+
+        .scanner-frame::before {
+            top: 50%;
+            animation: scan 2s ease-in-out infinite;
+        }
+
+        @keyframes scan {
+            0%, 100% { transform: translateY(-50%) scaleX(1); opacity: 0.8; }
+            50% { transform: translateY(-50%) scaleX(0.95); opacity: 1; }
+        }
+
+        .scanner-hint {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.85);
+            background: rgba(0, 0, 0, 0.6);
+            padding: 8px 16px;
+            border-radius: 100px;
+            backdrop-filter: blur(8px);
+            white-space: nowrap;
+        }
+
+        /* Video recorder */
+        #video-container {
+            position: relative;
+            background: #000;
+            border-radius: 16px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            aspect-ratio: 3 / 4;
+        }
+
+        #video-preview {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .rec-indicator {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 8px 14px;
+            border-radius: 100px;
+            backdrop-filter: blur(8px);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .rec-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--error);
+            animation: rec-blink 1s ease-in-out infinite;
+        }
+
+        @keyframes rec-blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 18px 24px;
+            border: none;
+            border-radius: 14px;
+            font-family: inherit;
+            font-size: 17px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            cursor: pointer;
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn:active {
+            transform: scale(0.97);
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #000;
+            box-shadow: 0 0 30px var(--accent-glow);
+        }
+
+        .btn-danger {
+            background: var(--error);
+            color: #fff;
+        }
+
+        .btn-secondary {
+            background: var(--bg-card);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: #000;
+        }
+
+        .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+
+        /* Progress / upload */
+        .progress-wrap {
+            margin-top: 20px;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent), #ff8c5a);
+            border-radius: 3px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .progress-text {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            color: var(--text-dim);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        /* Status messages */
+        .status-msg {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 14px 16px;
+            border-radius: 12px;
+            margin-bottom: 16px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .status-msg.success {
+            background: rgba(74, 222, 128, 0.1);
+            border: 1px solid rgba(74, 222, 128, 0.3);
+            color: var(--success);
+        }
+
+        .status-msg.error {
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: var(--error);
+        }
+
+        .status-msg.info {
+            background: rgba(255, 107, 53, 0.08);
+            border: 1px solid rgba(255, 107, 53, 0.25);
+            color: var(--accent);
+        }
+
+        .status-icon {
+            flex-shrink: 0;
+            width: 18px;
+            height: 18px;
+            margin-top: 1px;
+        }
+
+        /* Done screen */
+        .done-screen {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .done-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--success);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 24px;
+            animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes pop {
+            0% { transform: scale(0); }
+            100% { transform: scale(1); }
+        }
+
+        .done-title {
+            font-size: 24px;
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+
+        .done-subtitle {
+            color: var(--text-dim);
+            margin-bottom: 32px;
+            font-size: 14px;
+        }
+
+        /* History */
+        .history {
+            margin-top: 32px;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+        }
+
+        .history-title {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--text-mute);
+            margin-bottom: 12px;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 13px;
+        }
+
+        .history-item:last-child { border-bottom: none; }
+
+        .history-status {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            flex-shrink: 0;
+        }
+
+        .history-status.error { background: var(--error); }
+
+        .history-code {
+            font-family: 'JetBrains Mono', monospace;
+            flex: 1;
+            color: var(--text);
+        }
+
+        .history-time {
+            font-family: 'JetBrains Mono', monospace;
+            color: var(--text-mute);
+            font-size: 11px;
+        }
+
+        /* Settings */
+        .settings-toggle {
+            background: none;
+            border: none;
+            color: var(--text-mute);
+            font-size: 12px;
+            cursor: pointer;
+            padding: 8px;
+        }
+
+        .settings-panel {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            z-index: 100;
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .settings-panel.open { display: flex; }
+
+        .settings-content {
+            background: var(--bg-card);
+            width: 100%;
+            max-width: 480px;
+            border-radius: 24px 24px 0 0;
+            padding: 24px 20px 40px;
+            border-top: 1px solid var(--border);
+            animation: slide-up 0.3s ease;
+        }
+
+        @keyframes slide-up {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .settings-title {
+            font-size: 20px;
+            font-weight: 800;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-dim);
+            margin-bottom: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 14px 16px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        /* Manual input for ШК */
+        .manual-input-wrap {
+            margin-top: 12px;
+            text-align: center;
+        }
+
+        .manual-link {
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            font-size: 13px;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .hidden { display: none !important; }
+
+        /* Spinner */
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid rgba(0, 0, 0, 0.2);
+            border-top-color: #000;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        .spinner.light {
+            border-color: rgba(255, 255, 255, 0.2);
+            border-top-color: #fff;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="app">
+
+        <!-- Header -->
+        <div class="header">
+            <div class="header-title">СКЛАД <span>·</span> ВОЗВРАТЫ</div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <div class="status-dot" id="net-status"></div>
+                <button class="settings-toggle" onclick="toggleSettings()">⚙</button>
+            </div>
+        </div>
+
+        <!-- Main -->
+        <div class="main">
+
+            <!-- Steps indicator -->
+            <div class="steps">
+                <div class="step" id="step-1"></div>
+                <div class="step" id="step-2"></div>
+                <div class="step" id="step-3"></div>
+            </div>
+
+            <!-- STAGE 1: SCAN -->
+            <div id="stage-scan">
+                <div class="stage-label">Шаг 1 из 3</div>
+                <div class="stage-title">Сканирование штрихкода</div>
+
+                <div id="scanner-container">
+                    <div id="qr-reader"></div>
+                    <div class="scanner-overlay">
+                        <div class="scanner-frame"></div>
+                    </div>
+                    <div class="scanner-hint">Наведите камеру на штрихкод</div>
+                </div>
+
+                <button class="btn btn-secondary" onclick="restartScanner()">
+                    Перезапустить камеру
+                </button>
+
+                <div class="manual-input-wrap">
+                    <button class="manual-link" onclick="manualInput()">Ввести номер вручную</button>
+                </div>
+            </div>
+
+            <!-- STAGE 2: RECORD -->
+            <div id="stage-record" class="hidden">
+                <div class="stage-label">Шаг 2 из 3</div>
+                <div class="stage-title">Запись распаковки</div>
+
+                <div class="card">
+                    <div class="card-label">Номер возврата</div>
+                    <div class="card-value" id="display-barcode">—</div>
+                </div>
+
+                <div id="video-container">
+                    <video id="video-preview" autoplay muted playsinline></video>
+                    <div class="rec-indicator hidden" id="rec-ind">
+                        <div class="rec-dot"></div>
+                        <span id="rec-timer">00:00</span>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" id="btn-record" onclick="toggleRecording()">
+                    🎥 Начать запись
+                </button>
+
+                <div style="margin-top: 12px;">
+                    <button class="btn btn-secondary" onclick="cancelAndScan()">
+                        ← Назад к сканированию
+                    </button>
+                </div>
+            </div>
+
+            <!-- STAGE 3: UPLOAD -->
+            <div id="stage-upload" class="hidden">
+                <div class="stage-label">Шаг 3 из 3</div>
+                <div class="stage-title">Загрузка и сохранение</div>
+
+                <div class="card">
+                    <div class="card-label">Номер возврата</div>
+                    <div class="card-value" id="upload-barcode">—</div>
+                </div>
+
+                <div class="card">
+                    <div class="card-label">Файл</div>
+                    <div class="card-value mono" id="upload-filename">—</div>
+                    <div style="font-size: 12px; color: var(--text-mute); margin-top: 4px;" id="upload-size">—</div>
+                </div>
+
+                <div class="progress-wrap">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <div class="progress-text">
+                        <span id="progress-status">Подготовка...</span>
+                        <span id="progress-percent">0%</span>
+                    </div>
+                </div>
+
+                <div id="upload-msgs" style="margin-top: 20px;"></div>
+            </div>
+
+            <!-- STAGE 4: DONE -->
+            <div id="stage-done" class="hidden">
+                <div class="done-screen">
+                    <div class="done-icon">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    </div>
+                    <div class="done-title">Возврат обработан</div>
+                    <div class="done-subtitle" id="done-barcode">—</div>
+
+                    <button class="btn btn-primary" onclick="resetAndScan()">
+                        Следующий возврат →
+                    </button>
+                </div>
+            </div>
+
+            <!-- History -->
+            <div class="history" id="history-section">
+                <div class="history-title">Сегодня обработано</div>
+                <div id="history-list"></div>
+            </div>
+
+        </div>
+
+        <!-- Settings panel -->
+        <div class="settings-panel" id="settings">
+            <div class="settings-content">
+                <div class="settings-title">Настройки</div>
+
+                <div class="form-group">
+                    <label class="form-label">Адрес сервера (Backend URL)</label>
+                    <input type="text" class="form-input" id="backend-url" placeholder="https://your-server.com">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Секретный ключ доступа</label>
+                    <input type="password" class="form-input" id="api-key" placeholder="Введите ключ">
+                </div>
+
+                <button class="btn btn-primary" onclick="saveSettings()">Сохранить</button>
+                <div style="height: 8px;"></div>
+                <button class="btn btn-secondary" onclick="toggleSettings()">Закрыть</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // ==================================
+        // СОСТОЯНИЕ ПРИЛОЖЕНИЯ
+        // ==================================
+        const state = {
+            barcode: null,
+            videoBlob: null,
+            stream: null,
+            recorder: null,
+            chunks: [],
+            recording: false,
+            recStartTime: null,
+            recTimer: null,
+            scanner: null,
+            backendUrl: localStorage.getItem('backendUrl') || '',
+            apiKey: localStorage.getItem('apiKey') || '',
+            history: JSON.parse(localStorage.getItem('history') || '[]'),
+        };
+
+        // ==================================
+        // НАВИГАЦИЯ ПО ЭТАПАМ
+        // ==================================
+        function showStage(stage) {
+            ['scan', 'record', 'upload', 'done'].forEach(s => {
+                document.getElementById('stage-' + s).classList.add('hidden');
+            });
+            document.getElementById('stage-' + stage).classList.remove('hidden');
+
+            // Steps indicator
+            const steps = ['step-1', 'step-2', 'step-3'];
+            steps.forEach(s => {
+                document.getElementById(s).classList.remove('active', 'done');
+            });
+
+            if (stage === 'scan') {
+                document.getElementById('step-1').classList.add('active');
+            } else if (stage === 'record') {
+                document.getElementById('step-1').classList.add('done');
+                document.getElementById('step-2').classList.add('active');
+            } else if (stage === 'upload') {
+                document.getElementById('step-1').classList.add('done');
+                document.getElementById('step-2').classList.add('done');
+                document.getElementById('step-3').classList.add('active');
+            } else if (stage === 'done') {
+                steps.forEach(s => document.getElementById(s).classList.add('done'));
+            }
+        }
+
+        // ==================================
+        // ЭТАП 1: СКАНИРОВАНИЕ ШК
+        // ==================================
+        function startScanner() {
+            if (state.scanner) {
+                state.scanner.clear().catch(() => {});
+            }
+
+            state.scanner = new Html5Qrcode("qr-reader");
+
+            const config = {
+                fps: 10,
+                qrbox: { width: 280, height: 100 },
+                aspectRatio: 4 / 5,
+                formatsToSupport: [
+                    Html5QrcodeSupportedFormats.CODE_128,
+                    Html5QrcodeSupportedFormats.CODE_39,
+                    Html5QrcodeSupportedFormats.EAN_13,
+                    Html5QrcodeSupportedFormats.EAN_8,
+                    Html5QrcodeSupportedFormats.UPC_A,
+                    Html5QrcodeSupportedFormats.QR_CODE,
+                ]
+            };
+
+            state.scanner.start(
+                { facingMode: "environment" },
+                config,
+                onScanSuccess,
+                () => {} // ignore scan failures (per frame)
+            ).catch(err => {
+                showError('Не удалось включить камеру: ' + err);
+            });
+        }
+
+        function onScanSuccess(decodedText) {
+            // Проверяем формат: должен начинаться с букв и содержать цифры
+            const code = decodedText.trim();
+            if (!code || code.length < 3) return;
+
+            // Звук + вибрация для подтверждения
+            if (navigator.vibrate) navigator.vibrate(100);
+
+            state.barcode = code;
+            stopScanner();
+            startRecording();
+        }
+
+        function stopScanner() {
+            if (state.scanner) {
+                state.scanner.stop().then(() => {
+                    state.scanner.clear();
+                }).catch(() => {});
+            }
+        }
+
+        function restartScanner() {
+            stopScanner();
+            setTimeout(startScanner, 300);
+        }
+
+        function manualInput() {
+            const code = prompt('Введите номер возврата вручную:');
+            if (code && code.trim()) {
+                state.barcode = code.trim();
+                stopScanner();
+                startRecording();
+            }
+        }
+
+        // ==================================
+        // ЭТАП 2: ЗАПИСЬ ВИДЕО
+        // ==================================
+        async function startRecording() {
+            showStage('record');
+            document.getElementById('display-barcode').textContent = state.barcode;
+
+            try {
+                state.stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: true
+                });
+
+                const preview = document.getElementById('video-preview');
+                preview.srcObject = state.stream;
+
+            } catch (err) {
+                alert('Не удалось включить камеру: ' + err.message);
+                showStage('scan');
+                startScanner();
+            }
+        }
+
+        function toggleRecording() {
+            if (!state.recording) {
+                beginRecord();
+            } else {
+                stopRecord();
+            }
+        }
+
+        function beginRecord() {
+            if (!state.stream) return;
+
+            state.chunks = [];
+
+            // Подбираем поддерживаемый формат
+            let mimeType = 'video/mp4';
+            if (!MediaRecorder.isTypeSupported(mimeType)) {
+                mimeType = 'video/webm;codecs=vp9,opus';
+            }
+            if (!MediaRecorder.isTypeSupported(mimeType)) {
+                mimeType = 'video/webm';
+            }
+
+            try {
+                state.recorder = new MediaRecorder(state.stream, {
+                    mimeType: mimeType,
+                    videoBitsPerSecond: 2500000 // 2.5 Mbps - баланс качество/размер
+                });
+            } catch (e) {
+                state.recorder = new MediaRecorder(state.stream);
+            }
+
+            state.recorder.ondataavailable = e => {
+                if (e.data && e.data.size > 0) state.chunks.push(e.data);
+            };
+
+            state.recorder.onstop = () => {
+                const ext = state.recorder.mimeType.includes('mp4') ? 'mp4' : 'webm';
+                state.videoBlob = new Blob(state.chunks, { type: state.recorder.mimeType });
+                state.videoBlob.fileExtension = ext;
+                uploadVideo();
+            };
+
+            state.recorder.start(1000); // chunk every second
+            state.recording = true;
+            state.recStartTime = Date.now();
+
+            // UI updates
+            document.getElementById('rec-ind').classList.remove('hidden');
+            const btn = document.getElementById('btn-record');
+            btn.className = 'btn btn-danger';
+            btn.innerHTML = '⏹ Остановить запись';
+
+            // Timer
+            state.recTimer = setInterval(updateTimer, 1000);
+            updateTimer();
+
+            if (navigator.vibrate) navigator.vibrate(50);
+        }
+
+        function updateTimer() {
+            const elapsed = Math.floor((Date.now() - state.recStartTime) / 1000);
+            const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+            const s = String(elapsed % 60).padStart(2, '0');
+            document.getElementById('rec-timer').textContent = `${m}:${s}`;
+        }
+
+        function stopRecord() {
+            if (state.recorder && state.recording) {
+                state.recorder.stop();
+                state.recording = false;
+                clearInterval(state.recTimer);
+
+                // Stop camera stream
+                if (state.stream) {
+                    state.stream.getTracks().forEach(t => t.stop());
+                }
+
+                if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+            }
+        }
+
+        function cancelAndScan() {
+            if (state.stream) state.stream.getTracks().forEach(t => t.stop());
+            state.barcode = null;
+            showStage('scan');
+            startScanner();
+        }
+
+        // ==================================
+        // ЭТАП 3: ЗАГРУЗКА В ОБЛАКО + МОЙСКЛАД
+        // ==================================
+        async function uploadVideo() {
+            showStage('upload');
+
+            const ext = state.videoBlob.fileExtension || 'mp4';
+            const filename = `${state.barcode}.${ext}`;
+            const sizeMB = (state.videoBlob.size / 1024 / 1024).toFixed(1);
+
+            document.getElementById('upload-barcode').textContent = state.barcode;
+            document.getElementById('upload-filename').textContent = filename;
+            document.getElementById('upload-size').textContent = `${sizeMB} МБ`;
+
+            // Validate settings
+            if (!state.backendUrl || !state.apiKey) {
+                showUploadError('Не настроен сервер. Откройте настройки (⚙).');
+                return;
+            }
+
+            // Build form data
+            const formData = new FormData();
+            formData.append('barcode', state.barcode);
+            formData.append('filename', filename);
+            formData.append('video', state.videoBlob, filename);
+
+            try {
+                updateProgress(0, 'Подключение к серверу...');
+
+                // Используем XHR для отслеживания прогресса
+                const result = await uploadWithProgress(formData);
+
+                updateProgress(100, 'Готово');
+                addToHistory(state.barcode, true);
+                showDone();
+
+            } catch (err) {
+                showUploadError(err.message || String(err));
+                addToHistory(state.barcode, false);
+            }
+        }
+
+        function uploadWithProgress(formData) {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', state.backendUrl + '/api/process-return');
+                xhr.setRequestHeader('X-API-Key', state.apiKey);
+                xhr.timeout = 5 * 60 * 1000; // 5 минут
+
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        const percent = Math.round((e.loaded / e.total) * 90); // 0-90% upload
+                        updateProgress(percent, 'Загрузка на сервер...');
+                    }
+                };
+
+                xhr.upload.onload = () => {
+                    updateProgress(95, 'Загрузка на Яндекс.Диск...');
+                };
+
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            resolve(JSON.parse(xhr.responseText));
+                        } catch {
+                            resolve({});
+                        }
+                    } else {
+                        let msg = `Ошибка ${xhr.status}`;
+                        try {
+                            const r = JSON.parse(xhr.responseText);
+                            if (r.error) msg = r.error;
+                        } catch {}
+                        reject(new Error(msg));
+                    }
+                };
+
+                xhr.onerror = () => reject(new Error('Ошибка сети. Проверьте интернет.'));
+                xhr.ontimeout = () => reject(new Error('Превышено время ожидания. Попробуйте ещё раз.'));
+
+                xhr.send(formData);
+            });
+        }
+
+        function updateProgress(percent, status) {
+            document.getElementById('progress-fill').style.width = percent + '%';
+            document.getElementById('progress-percent').textContent = percent + '%';
+            document.getElementById('progress-status').textContent = status;
+        }
+
+        function showUploadError(msg) {
+            const div = document.getElementById('upload-msgs');
+            div.innerHTML = `
+                <div class="status-msg error">
+                    <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <div>${msg}</div>
+                </div>
+                <button class="btn btn-secondary" onclick="uploadVideo()" style="margin-top: 12px;">↻ Повторить попытку</button>
+                <div style="height: 8px;"></div>
+                <button class="btn btn-secondary" onclick="resetAndScan()">← Начать заново</button>
+            `;
+        }
+
+        // ==================================
+        // ЭТАП 4: ГОТОВО
+        // ==================================
+        function showDone() {
+            showStage('done');
+            document.getElementById('done-barcode').textContent = state.barcode;
+        }
+
+        function resetAndScan() {
+            state.barcode = null;
+            state.videoBlob = null;
+            state.chunks = [];
+
+            updateProgress(0, 'Подготовка...');
+            document.getElementById('upload-msgs').innerHTML = '';
+
+            const btn = document.getElementById('btn-record');
+            btn.className = 'btn btn-primary';
+            btn.innerHTML = '🎥 Начать запись';
+            document.getElementById('rec-ind').classList.add('hidden');
+
+            showStage('scan');
+            startScanner();
+        }
+
+        // ==================================
+        // ИСТОРИЯ
+        // ==================================
+        function addToHistory(code, success) {
+            const item = {
+                code: code,
+                success: success,
+                time: new Date().toISOString()
+            };
+            state.history.unshift(item);
+            state.history = state.history.slice(0, 30); // последние 30
+            localStorage.setItem('history', JSON.stringify(state.history));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('history-list');
+            const today = new Date().toDateString();
+            const todayItems = state.history.filter(i => new Date(i.time).toDateString() === today);
+
+            if (todayItems.length === 0) {
+                list.innerHTML = '<div style="color: var(--text-mute); font-size: 13px; padding: 8px 0;">Ещё ничего не обработано</div>';
+                return;
+            }
+
+            list.innerHTML = todayItems.map(i => {
+                const t = new Date(i.time);
+                const time = `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`;
+                return `
+                    <div class="history-item">
+                        <div class="history-status ${i.success ? '' : 'error'}"></div>
+                        <div class="history-code">${i.code}</div>
+                        <div class="history-time">${time}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ==================================
+        // НАСТРОЙКИ
+        // ==================================
+        function toggleSettings() {
+            const panel = document.getElementById('settings');
+            panel.classList.toggle('open');
+            if (panel.classList.contains('open')) {
+                document.getElementById('backend-url').value = state.backendUrl;
+                document.getElementById('api-key').value = state.apiKey;
+            }
+        }
+
+        function saveSettings() {
+            const url = document.getElementById('backend-url').value.trim().replace(/\/$/, '');
+            const key = document.getElementById('api-key').value.trim();
+
+            if (!url) {
+                alert('Укажите адрес сервера');
+                return;
+            }
+
+            state.backendUrl = url;
+            state.apiKey = key;
+            localStorage.setItem('backendUrl', url);
+            localStorage.setItem('apiKey', key);
+
+            toggleSettings();
+        }
+
+        // ==================================
+        // СТАТУС СЕТИ
+        // ==================================
+        function updateNetStatus() {
+            const dot = document.getElementById('net-status');
+            if (navigator.onLine) {
+                dot.classList.remove('offline');
+            } else {
+                dot.classList.add('offline');
+            }
+        }
+
+        window.addEventListener('online', updateNetStatus);
+        window.addEventListener('offline', updateNetStatus);
+
+        // ==================================
+        // ИНИЦИАЛИЗАЦИЯ
+        // ==================================
+        function showError(msg) {
+            alert(msg);
+        }
+
+        window.addEventListener('load', () => {
+            updateNetStatus();
+            renderHistory();
+
+            if (!state.backendUrl) {
+                toggleSettings();
+            } else {
+                showStage('scan');
+                startScanner();
+            }
+        });
+
+        // Регистрация Service Worker для PWA
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(() => {});
+        }
+    </script>
+</body>
+</html>
