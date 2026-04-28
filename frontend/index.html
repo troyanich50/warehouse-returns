@@ -13,12 +13,7 @@
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&display=swap');
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         :root {
             --bg: #0a0a0a;
             --bg-soft: #141414;
@@ -33,135 +28,89 @@
             --text-dim: #888;
             --text-mute: #555;
         }
-        html, body {
-            height: 100%;
-            overflow: hidden;
-            overscroll-behavior: none;
-        }
+        html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
         body {
             font-family: 'Manrope', sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            font-size: 16px;
-            line-height: 1.5;
-            user-select: none;
-            -webkit-user-select: none;
+            background: var(--bg); color: var(--text);
+            font-size: 16px; line-height: 1.5;
+            user-select: none; -webkit-user-select: none;
         }
         .mono { font-family: 'JetBrains Mono', monospace; }
         .app {
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            height: 100dvh;
-            max-width: 480px;
-            margin: 0 auto;
+            display: flex; flex-direction: column;
+            height: 100vh; height: 100dvh;
+            max-width: 480px; margin: 0 auto;
             background: var(--bg);
         }
         .header {
             padding: 20px 20px 12px;
             border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            display: flex; align-items: center; justify-content: space-between;
         }
         .header-title {
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
+            font-size: 11px; font-weight: 700;
+            letter-spacing: 0.15em; text-transform: uppercase;
             color: var(--text-dim);
         }
         .header-title span { color: var(--accent); }
         .status-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--success);
-            box-shadow: 0 0 8px var(--success);
+            width: 8px; height: 8px; border-radius: 50%;
+            background: var(--success); box-shadow: 0 0 8px var(--success);
             animation: pulse 2s ease-in-out infinite;
         }
-        .status-dot.offline {
-            background: var(--error);
-            box-shadow: 0 0 8px var(--error);
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.4; }
-        }
+        .status-dot.offline { background: var(--error); box-shadow: 0 0 8px var(--error); }
+        @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
         .main {
-            flex: 1;
-            overflow-y: auto;
+            flex: 1; overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             padding: 24px 20px;
         }
-        .steps {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 32px;
-        }
+        .steps { display: flex; gap: 8px; margin-bottom: 32px; }
         .step {
-            flex: 1;
-            height: 3px;
-            background: var(--border);
-            border-radius: 2px;
+            flex: 1; height: 3px;
+            background: var(--border); border-radius: 2px;
             transition: background 0.4s ease;
         }
         .step.active { background: var(--accent); }
         .step.done { background: var(--success); }
         .stage-label {
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
-            color: var(--text-mute);
-            margin-bottom: 8px;
+            font-size: 11px; font-weight: 700;
+            letter-spacing: 0.15em; text-transform: uppercase;
+            color: var(--text-mute); margin-bottom: 8px;
         }
         .stage-title {
-            font-size: 28px;
-            font-weight: 800;
-            letter-spacing: -0.02em;
-            margin-bottom: 24px;
+            font-size: 28px; font-weight: 800;
+            letter-spacing: -0.02em; margin-bottom: 24px;
             line-height: 1.1;
         }
         .card {
             background: var(--bg-card);
             border: 1px solid var(--border);
             border-radius: 16px;
-            padding: 20px;
-            margin-bottom: 16px;
+            padding: 20px; margin-bottom: 16px;
         }
         .card-label {
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            color: var(--text-mute);
-            margin-bottom: 8px;
+            font-size: 11px; font-weight: 700;
+            letter-spacing: 0.1em; text-transform: uppercase;
+            color: var(--text-mute); margin-bottom: 8px;
         }
         .card-value {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 18px;
-            font-weight: 500;
+            font-size: 18px; font-weight: 500;
             word-break: break-all;
         }
 
         #scanner-container {
-            position: relative;
-            background: #000;
-            border-radius: 16px;
-            overflow: hidden;
-            margin-bottom: 20px;
-            aspect-ratio: 4 / 5;
+            position: relative; background: #000;
+            border-radius: 16px; overflow: hidden;
+            margin-bottom: 20px; aspect-ratio: 4 / 5;
         }
         #qr-reader {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
+            position: absolute; inset: 0;
+            width: 100%; height: 100%;
         }
         #qr-reader video {
-            width: 100% !important;
-            height: 100% !important;
+            width: 100% !important; height: 100% !important;
             object-fit: cover !important;
         }
         #qr-reader__scan_region {
@@ -171,111 +120,60 @@
         #qr-reader__scan_region img { display: none !important; }
         #qr-reader__dashboard { display: none !important; }
         .scanner-hint {
-            position: absolute;
-            bottom: 16px;
-            left: 50%;
-            transform: translateX(-50%);
+            position: absolute; bottom: 16px;
+            left: 50%; transform: translateX(-50%);
             font-size: 13px;
             color: rgba(255, 255, 255, 0.85);
             background: rgba(0, 0, 0, 0.6);
-            padding: 8px 16px;
-            border-radius: 100px;
+            padding: 8px 16px; border-radius: 100px;
             backdrop-filter: blur(8px);
-            white-space: nowrap;
-            z-index: 10;
+            white-space: nowrap; z-index: 10;
         }
 
         #video-container {
-            position: relative;
-            background: #000;
-            border-radius: 16px;
-            overflow: hidden;
-            margin-bottom: 20px;
-            aspect-ratio: 3 / 4;
+            position: relative; background: #000;
+            border-radius: 16px; overflow: hidden;
+            margin-bottom: 20px; aspect-ratio: 3 / 4;
         }
-        #video-preview {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
+        #video-preview { width: 100%; height: 100%; object-fit: cover; }
         .rec-indicator {
-            position: absolute;
-            top: 16px;
-            left: 16px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            position: absolute; top: 16px; left: 16px;
+            display: flex; align-items: center; gap: 8px;
             background: rgba(0, 0, 0, 0.6);
-            padding: 8px 14px;
-            border-radius: 100px;
+            padding: 8px 14px; border-radius: 100px;
             backdrop-filter: blur(8px);
             font-family: 'JetBrains Mono', monospace;
-            font-size: 14px;
-            font-weight: 500;
+            font-size: 14px; font-weight: 500;
         }
         .rec-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
+            width: 10px; height: 10px; border-radius: 50%;
             background: var(--error);
             animation: rec-blink 1s ease-in-out infinite;
         }
-        @keyframes rec-blink {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.3; }
-        }
+        @keyframes rec-blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
         .btn {
-            width: 100%;
-            padding: 18px 24px;
-            border: none;
-            border-radius: 14px;
-            font-family: inherit;
-            font-size: 17px;
-            font-weight: 700;
-            letter-spacing: -0.01em;
+            width: 100%; padding: 18px 24px;
+            border: none; border-radius: 14px;
+            font-family: inherit; font-size: 17px;
+            font-weight: 700; letter-spacing: -0.01em;
             cursor: pointer;
             transition: transform 0.15s ease, box-shadow 0.15s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
         }
         .btn:active { transform: scale(0.97); }
-        .btn-primary {
-            background: var(--accent);
-            color: #000;
-            box-shadow: 0 0 30px var(--accent-glow);
-        }
-        .btn-danger {
-            background: var(--error);
-            color: #fff;
-        }
-        .btn-secondary {
-            background: var(--bg-card);
-            color: var(--text);
-            border: 1px solid var(--border);
-        }
-        .btn-success {
-            background: var(--success);
-            color: #000;
-        }
-        .btn:disabled {
-            opacity: 0.4;
-            cursor: not-allowed;
-        }
+        .btn-primary { background: var(--accent); color: #000; box-shadow: 0 0 30px var(--accent-glow); }
+        .btn-danger { background: var(--error); color: #fff; }
+        .btn-secondary { background: var(--bg-card); color: var(--text); border: 1px solid var(--border); }
+        .btn-success { background: var(--success); color: #000; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
         .btn-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-bottom: 12px;
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 10px; margin-bottom: 12px;
         }
         .progress-wrap { margin-top: 20px; }
         .progress-bar {
-            height: 6px;
-            background: var(--border);
-            border-radius: 3px;
-            overflow: hidden;
-            margin-bottom: 8px;
+            height: 6px; background: var(--border);
+            border-radius: 3px; overflow: hidden; margin-bottom: 8px;
         }
         .progress-fill {
             height: 100%;
@@ -286,20 +184,13 @@
         }
         .progress-text {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 13px;
-            color: var(--text-dim);
-            display: flex;
-            justify-content: space-between;
+            font-size: 13px; color: var(--text-dim);
+            display: flex; justify-content: space-between;
         }
         .status-msg {
-            display: flex;
-            align-items: flex-start;
-            gap: 12px;
-            padding: 14px 16px;
-            border-radius: 12px;
-            margin-bottom: 16px;
-            font-size: 14px;
-            line-height: 1.4;
+            display: flex; align-items: flex-start; gap: 12px;
+            padding: 14px 16px; border-radius: 12px;
+            margin-bottom: 16px; font-size: 14px; line-height: 1.4;
         }
         .status-msg.success {
             background: rgba(74, 222, 128, 0.1);
@@ -311,29 +202,36 @@
             border: 1px solid rgba(239, 68, 68, 0.3);
             color: var(--error);
         }
+        .status-msg.warning {
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            color: var(--warning);
+        }
         .status-msg.info {
             background: rgba(255, 107, 53, 0.08);
             border: 1px solid rgba(255, 107, 53, 0.25);
             color: var(--accent);
         }
-        .status-icon {
-            flex-shrink: 0;
-            width: 18px;
-            height: 18px;
-            margin-top: 1px;
-        }
-        .done-screen {
-            text-align: center;
-            padding: 40px 20px;
-        }
+        .status-icon { flex-shrink: 0; width: 18px; height: 18px; margin-top: 1px; }
+        .done-screen { text-align: center; padding: 40px 20px; }
         .done-icon {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
+            width: 80px; height: 80px; border-radius: 50%;
             background: var(--success);
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 24px;
+            animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .warn-icon {
+            width: 80px; height: 80px; border-radius: 50%;
+            background: var(--warning);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 24px;
+            animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .err-icon {
+            width: 80px; height: 80px; border-radius: 50%;
+            background: var(--error);
+            display: flex; align-items: center; justify-content: center;
             margin: 0 auto 24px;
             animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
@@ -341,144 +239,94 @@
             0% { transform: scale(0); }
             100% { transform: scale(1); }
         }
-        .done-title {
-            font-size: 24px;
-            font-weight: 800;
-            margin-bottom: 8px;
+        .done-title { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+        .done-subtitle { color: var(--text-dim); margin-bottom: 32px; font-size: 14px; }
+        .editable-code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 18px;
+            width: 100%;
+            padding: 12px 14px;
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            margin-top: 8px;
         }
-        .done-subtitle {
-            color: var(--text-dim);
-            margin-bottom: 32px;
-            font-size: 14px;
-        }
-        .history {
-            margin-top: 32px;
-            padding-top: 24px;
-            border-top: 1px solid var(--border);
-        }
+        .editable-code:focus { outline: none; border-color: var(--accent); }
+        .history { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border); }
         .history-title {
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
-            color: var(--text-mute);
-            margin-bottom: 12px;
+            font-size: 11px; font-weight: 700;
+            letter-spacing: 0.15em; text-transform: uppercase;
+            color: var(--text-mute); margin-bottom: 12px;
         }
         .history-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px 0;
-            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; gap: 12px;
+            padding: 12px 0; border-bottom: 1px solid var(--border);
             font-size: 13px;
         }
         .history-item:last-child { border-bottom: none; }
-        .history-status {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: var(--success);
-            flex-shrink: 0;
-        }
+        .history-status { width: 8px; height: 8px; border-radius: 50%; background: var(--success); flex-shrink: 0; }
         .history-status.error { background: var(--error); }
-        .history-code {
-            font-family: 'JetBrains Mono', monospace;
-            flex: 1;
-            color: var(--text);
-        }
-        .history-time {
-            font-family: 'JetBrains Mono', monospace;
-            color: var(--text-mute);
-            font-size: 11px;
-        }
-        .settings-toggle {
-            background: none;
-            border: none;
-            color: var(--text-mute);
-            font-size: 12px;
-            cursor: pointer;
-            padding: 8px;
-        }
+        .history-code { font-family: 'JetBrains Mono', monospace; flex: 1; color: var(--text); }
+        .history-time { font-family: 'JetBrains Mono', monospace; color: var(--text-mute); font-size: 11px; }
+        .settings-toggle { background: none; border: none; color: var(--text-mute); font-size: 12px; cursor: pointer; padding: 8px; }
         .settings-panel {
-            position: fixed;
-            inset: 0;
+            position: fixed; inset: 0;
             background: rgba(0, 0, 0, 0.85);
             backdrop-filter: blur(8px);
             z-index: 100;
-            display: none;
-            align-items: flex-end;
-            justify-content: center;
+            display: none; align-items: flex-end; justify-content: center;
         }
         .settings-panel.open { display: flex; }
         .settings-content {
             background: var(--bg-card);
-            width: 100%;
-            max-width: 480px;
+            width: 100%; max-width: 480px;
             border-radius: 24px 24px 0 0;
             padding: 24px 20px 40px;
             border-top: 1px solid var(--border);
             animation: slide-up 0.3s ease;
         }
-        @keyframes slide-up {
-            from { transform: translateY(100%); }
-            to { transform: translateY(0); }
-        }
-        .settings-title {
-            font-size: 20px;
-            font-weight: 800;
-            margin-bottom: 20px;
-        }
+        @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .settings-title { font-size: 20px; font-weight: 800; margin-bottom: 20px; }
         .form-group { margin-bottom: 16px; }
         .form-label {
-            display: block;
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-dim);
-            margin-bottom: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
+            display: block; font-size: 12px; font-weight: 600;
+            color: var(--text-dim); margin-bottom: 6px;
+            text-transform: uppercase; letter-spacing: 0.05em;
         }
         .form-input {
-            width: 100%;
-            padding: 14px 16px;
-            background: var(--bg);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            color: var(--text);
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 14px;
+            width: 100%; padding: 14px 16px;
+            background: var(--bg); border: 1px solid var(--border);
+            border-radius: 10px; color: var(--text);
+            font-family: 'JetBrains Mono', monospace; font-size: 14px;
         }
-        .form-input:focus {
-            outline: none;
-            border-color: var(--accent);
-        }
-        .manual-input-wrap {
-            margin-top: 12px;
-            text-align: center;
-        }
+        .form-input:focus { outline: none; border-color: var(--accent); }
+        .manual-input-wrap { margin-top: 12px; text-align: center; }
         .manual-link {
-            background: none;
-            border: none;
-            color: var(--text-dim);
-            font-size: 13px;
-            text-decoration: underline;
-            cursor: pointer;
+            background: none; border: none;
+            color: var(--text-dim); font-size: 13px;
+            text-decoration: underline; cursor: pointer;
         }
         .hidden { display: none !important; }
         .spinner {
-            width: 18px;
-            height: 18px;
+            width: 18px; height: 18px;
             border: 2px solid rgba(0, 0, 0, 0.2);
-            border-top-color: #000;
-            border-radius: 50%;
+            border-top-color: #000; border-radius: 50%;
             animation: spin 0.8s linear infinite;
         }
-        .spinner.light {
-            border-color: rgba(255, 255, 255, 0.2);
-            border-top-color: #fff;
+        .spinner.light { border-color: rgba(255, 255, 255, 0.2); border-top-color: #fff; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .check-loading {
+            text-align: center;
+            padding: 40px 20px;
         }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+        .check-spinner {
+            width: 60px; height: 60px;
+            border: 4px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            margin: 0 auto 24px;
+            animation: spin 0.8s linear infinite;
         }
     </style>
 </head>
@@ -498,6 +346,7 @@
                 <div class="step" id="step-3"></div>
             </div>
 
+            <!-- ЭТАП: СКАН -->
             <div id="stage-scan">
                 <div class="stage-label">Шаг 1 из 3</div>
                 <div class="stage-title">Сканирование штрихкода</div>
@@ -505,14 +354,64 @@
                     <div id="qr-reader"></div>
                     <div class="scanner-hint">Наведите камеру на штрихкод</div>
                 </div>
-                <button class="btn btn-secondary" onclick="restartScanner()">
-                    Перезапустить камеру
-                </button>
+                <button class="btn btn-secondary" onclick="restartScanner()">Перезапустить камеру</button>
                 <div class="manual-input-wrap">
                     <button class="manual-link" onclick="manualInput()">Ввести номер вручную</button>
                 </div>
             </div>
 
+            <!-- ЭТАП: ПРОВЕРКА В МОЙСКЛАД -->
+            <div id="stage-check" class="hidden">
+                <div class="stage-label">Шаг 1 из 3</div>
+                <div class="stage-title">Проверка в МойСклад</div>
+                <div class="check-loading">
+                    <div class="check-spinner"></div>
+                    <div style="color: var(--text-dim); font-size: 14px;">
+                        Ищем возврат <span class="mono" id="check-barcode" style="color: var(--text);">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ЭТАП: НЕ НАЙДЕН -->
+            <div id="stage-notfound" class="hidden">
+                <div class="warn-icon">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    </svg>
+                </div>
+                <div class="done-title" style="text-align:center;">Возврат не найден</div>
+                <div class="done-subtitle" style="text-align:center;">Проверьте правильность штрихкода. Если он верен — создадим новый возврат.</div>
+                <div class="card">
+                    <div class="card-label">Отсканированный номер</div>
+                    <input type="text" class="editable-code" id="notfound-input" />
+                </div>
+                <button class="btn btn-primary" id="btn-create" onclick="createReturnAndProceed()">
+                    ✓ Всё верно — создать возврат
+                </button>
+                <div style="height: 10px;"></div>
+                <button class="btn btn-secondary" onclick="cancelAndScan()">← Назад к сканированию</button>
+            </div>
+
+            <!-- ЭТАП: ВИДЕО УЖЕ ЕСТЬ -->
+            <div id="stage-already" class="hidden">
+                <div class="err-icon">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </div>
+                <div class="done-title" style="text-align:center;">Видео уже записано</div>
+                <div class="done-subtitle" style="text-align:center;">Для этого возврата видео уже было загружено ранее. Повторная запись невозможна.</div>
+                <div class="card">
+                    <div class="card-label">Номер возврата</div>
+                    <div class="card-value" id="already-barcode">—</div>
+                </div>
+                <button class="btn btn-primary" onclick="cancelAndScan()">На главную</button>
+            </div>
+
+            <!-- ЭТАП: ЗАПИСЬ -->
             <div id="stage-record" class="hidden">
                 <div class="stage-label">Шаг 2 из 3</div>
                 <div class="stage-title">Запись распаковки</div>
@@ -527,16 +426,13 @@
                         <span id="rec-timer">00:00</span>
                     </div>
                 </div>
-                <button class="btn btn-primary" id="btn-record" onclick="toggleRecording()">
-                    🎥 Начать запись
-                </button>
+                <button class="btn btn-primary" id="btn-record" onclick="toggleRecording()">🎥 Начать запись</button>
                 <div style="margin-top: 12px;">
-                    <button class="btn btn-secondary" onclick="cancelAndScan()">
-                        ← Назад к сканированию
-                    </button>
+                    <button class="btn btn-secondary" onclick="cancelAndScan()">← Назад к сканированию</button>
                 </div>
             </div>
 
+            <!-- ЭТАП: ЗАГРУЗКА -->
             <div id="stage-upload" class="hidden">
                 <div class="stage-label">Шаг 3 из 3</div>
                 <div class="stage-title">Загрузка и сохранение</div>
@@ -550,9 +446,7 @@
                     <div style="font-size: 12px; color: var(--text-mute); margin-top: 4px;" id="upload-size">—</div>
                 </div>
                 <div class="progress-wrap">
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="progress-fill"></div>
-                    </div>
+                    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
                     <div class="progress-text">
                         <span id="progress-status">Подготовка...</span>
                         <span id="progress-percent">0%</span>
@@ -561,6 +455,7 @@
                 <div id="upload-msgs" style="margin-top: 20px;"></div>
             </div>
 
+            <!-- ЭТАП: ГОТОВО -->
             <div id="stage-done" class="hidden">
                 <div class="done-screen">
                     <div class="done-icon">
@@ -570,9 +465,7 @@
                     </div>
                     <div class="done-title">Возврат обработан</div>
                     <div class="done-subtitle" id="done-barcode">—</div>
-                    <button class="btn btn-primary" onclick="resetAndScan()">
-                        Следующий возврат →
-                    </button>
+                    <button class="btn btn-primary" onclick="resetAndScan()">Следующий возврат →</button>
                 </div>
             </div>
 
@@ -617,15 +510,13 @@
         };
 
         function showStage(stage) {
-            ['scan', 'record', 'upload', 'done'].forEach(s => {
+            ['scan','check','notfound','already','record','upload','done'].forEach(s => {
                 document.getElementById('stage-' + s).classList.add('hidden');
             });
             document.getElementById('stage-' + stage).classList.remove('hidden');
             const steps = ['step-1', 'step-2', 'step-3'];
-            steps.forEach(s => {
-                document.getElementById(s).classList.remove('active', 'done');
-            });
-            if (stage === 'scan') {
+            steps.forEach(s => document.getElementById(s).classList.remove('active','done'));
+            if (['scan','check','notfound','already'].includes(stage)) {
                 document.getElementById('step-1').classList.add('active');
             } else if (stage === 'record') {
                 document.getElementById('step-1').classList.add('done');
@@ -641,9 +532,7 @@
 
         // ============ СКАНИРОВАНИЕ ============
         function startScanner() {
-            if (state.scanner) {
-                state.scanner.clear().catch(() => {});
-            }
+            if (state.scanner) state.scanner.clear().catch(() => {});
             state.scanner = new Html5Qrcode("qr-reader");
             const config = {
                 fps: 10,
@@ -672,9 +561,7 @@
                 config,
                 onScanSuccess,
                 () => {}
-            ).catch(err => {
-                showError('Не удалось включить камеру: ' + err);
-            });
+            ).catch(err => alert('Не удалось включить камеру: ' + err));
         }
 
         function onScanSuccess(decodedText) {
@@ -683,28 +570,114 @@
             if (navigator.vibrate) navigator.vibrate(100);
             state.barcode = code;
             stopScanner();
-            startRecording();
+            checkBarcodeOnServer();
         }
 
         function stopScanner() {
             if (state.scanner) {
-                state.scanner.stop().then(() => {
-                    state.scanner.clear();
-                }).catch(() => {});
+                state.scanner.stop().then(() => state.scanner.clear()).catch(() => {});
             }
         }
 
-        function restartScanner() {
-            stopScanner();
-            setTimeout(startScanner, 300);
-        }
+        function restartScanner() { stopScanner(); setTimeout(startScanner, 300); }
 
         function manualInput() {
             const code = prompt('Введите номер возврата вручную:');
             if (code && code.trim()) {
                 state.barcode = code.trim();
                 stopScanner();
+                checkBarcodeOnServer();
+            }
+        }
+
+        // ============ ПРОВЕРКА В МОЙСКЛАД ============
+        async function checkBarcodeOnServer() {
+            showStage('check');
+            document.getElementById('check-barcode').textContent = state.barcode;
+
+            if (!state.backendUrl) {
+                alert('Не настроен сервер. Откройте настройки (⚙).');
+                cancelAndScan();
+                return;
+            }
+
+            try {
+                const r = await fetch(state.backendUrl + '/api/check-barcode', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ barcode: state.barcode })
+                });
+                const data = await r.json();
+
+                if (!r.ok) throw new Error(data.error || 'Ошибка проверки');
+
+                if (data.status === 'not_found') {
+                    showStage('notfound');
+                    document.getElementById('notfound-input').value = state.barcode;
+                } else if (data.status === 'has_video') {
+                    showStage('already');
+                    document.getElementById('already-barcode').textContent = state.barcode;
+                } else if (data.status === 'ready') {
+                    startRecording();
+                } else {
+                    throw new Error('Неизвестный статус: ' + data.status);
+                }
+            } catch (err) {
+                alert('Не удалось проверить возврат: ' + (err.message || err));
+                cancelAndScan();
+            }
+        }
+
+        async function createReturnAndProceed() {
+            const correctedCode = document.getElementById('notfound-input').value.trim();
+            if (!correctedCode) {
+                alert('Введите номер возврата');
+                return;
+            }
+            state.barcode = correctedCode;
+
+            const btn = document.getElementById('btn-create');
+            const origText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div> Создаём...';
+
+            try {
+                // Если поправили номер — снова проверяем (вдруг этот уже есть)
+                const checkResp = await fetch(state.backendUrl + '/api/check-barcode', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ barcode: state.barcode })
+                });
+                const checkData = await checkResp.json();
+                if (!checkResp.ok) throw new Error(checkData.error || 'Ошибка проверки');
+
+                if (checkData.status === 'has_video') {
+                    btn.disabled = false; btn.innerHTML = origText;
+                    showStage('already');
+                    document.getElementById('already-barcode').textContent = state.barcode;
+                    return;
+                }
+                if (checkData.status === 'ready') {
+                    // Уже существует и пуст — просто переходим к записи
+                    btn.disabled = false; btn.innerHTML = origText;
+                    startRecording();
+                    return;
+                }
+
+                // not_found → создаём
+                const createResp = await fetch(state.backendUrl + '/api/create-return', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ barcode: state.barcode })
+                });
+                const createData = await createResp.json();
+                if (!createResp.ok) throw new Error(createData.error || 'Ошибка создания');
+
+                btn.disabled = false; btn.innerHTML = origText;
                 startRecording();
+            } catch (err) {
+                btn.disabled = false; btn.innerHTML = origText;
+                alert('Не удалось создать возврат: ' + (err.message || err));
             }
         }
 
@@ -712,21 +685,20 @@
         async function startRecording() {
             showStage('record');
             document.getElementById('display-barcode').textContent = state.barcode;
+            const btn = document.getElementById('btn-record');
+            btn.className = 'btn btn-primary';
+            btn.innerHTML = '🎥 Начать запись';
+            document.getElementById('rec-ind').classList.add('hidden');
+
             try {
                 state.stream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        facingMode: 'environment',
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    },
+                    video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
                     audio: true
                 });
-                const preview = document.getElementById('video-preview');
-                preview.srcObject = state.stream;
+                document.getElementById('video-preview').srcObject = state.stream;
             } catch (err) {
                 alert('Не удалось включить камеру: ' + err.message);
-                showStage('scan');
-                startScanner();
+                cancelAndScan();
             }
         }
 
@@ -739,17 +711,10 @@
             if (!state.stream) return;
             state.chunks = [];
             let mimeType = 'video/mp4';
-            if (!MediaRecorder.isTypeSupported(mimeType)) {
-                mimeType = 'video/webm;codecs=vp9,opus';
-            }
-            if (!MediaRecorder.isTypeSupported(mimeType)) {
-                mimeType = 'video/webm';
-            }
+            if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm;codecs=vp9,opus';
+            if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
             try {
-                state.recorder = new MediaRecorder(state.stream, {
-                    mimeType: mimeType,
-                    videoBitsPerSecond: 2500000
-                });
+                state.recorder = new MediaRecorder(state.stream, { mimeType, videoBitsPerSecond: 2500000 });
             } catch (e) {
                 state.recorder = new MediaRecorder(state.stream);
             }
@@ -786,9 +751,7 @@
                 state.recorder.stop();
                 state.recording = false;
                 clearInterval(state.recTimer);
-                if (state.stream) {
-                    state.stream.getTracks().forEach(t => t.stop());
-                }
+                if (state.stream) state.stream.getTracks().forEach(t => t.stop());
                 if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
             }
         }
@@ -796,6 +759,7 @@
         function cancelAndScan() {
             if (state.stream) state.stream.getTracks().forEach(t => t.stop());
             state.barcode = null;
+            state.videoBlob = null;
             showStage('scan');
             startScanner();
         }
@@ -822,7 +786,7 @@
 
             try {
                 updateProgress(0, 'Подключение к серверу...');
-                const result = await uploadWithProgress(formData);
+                await uploadWithProgress(formData);
                 updateProgress(100, 'Готово');
                 addToHistory(state.barcode, true);
                 showDone();
@@ -844,22 +808,13 @@
                         updateProgress(percent, 'Загрузка на сервер...');
                     }
                 };
-                xhr.upload.onload = () => {
-                    updateProgress(95, 'Загрузка на Яндекс.Диск...');
-                };
+                xhr.upload.onload = () => updateProgress(95, 'Загрузка на Яндекс.Диск...');
                 xhr.onload = () => {
                     if (xhr.status >= 200 && xhr.status < 300) {
-                        try {
-                            resolve(JSON.parse(xhr.responseText));
-                        } catch {
-                            resolve({});
-                        }
+                        try { resolve(JSON.parse(xhr.responseText)); } catch { resolve({}); }
                     } else {
                         let msg = `Ошибка ${xhr.status}`;
-                        try {
-                            const r = JSON.parse(xhr.responseText);
-                            if (r.error) msg = r.error;
-                        } catch {}
+                        try { const r = JSON.parse(xhr.responseText); if (r.error) msg = r.error; } catch {}
                         reject(new Error(msg));
                     }
                 };
@@ -876,8 +831,7 @@
         }
 
         function showUploadError(msg) {
-            const div = document.getElementById('upload-msgs');
-            div.innerHTML = `
+            document.getElementById('upload-msgs').innerHTML = `
                 <div class="status-msg error">
                     <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="12" cy="12" r="10"></circle>
@@ -913,11 +867,7 @@
 
         // ============ ИСТОРИЯ ============
         function addToHistory(code, success) {
-            const item = {
-                code: code,
-                success: success,
-                time: new Date().toISOString()
-            };
+            const item = { code, success, time: new Date().toISOString() };
             state.history.unshift(item);
             state.history = state.history.slice(0, 30);
             localStorage.setItem('history', JSON.stringify(state.history));
@@ -940,8 +890,7 @@
                         <div class="history-status ${i.success ? '' : 'error'}"></div>
                         <div class="history-code">${i.code}</div>
                         <div class="history-time">${time}</div>
-                    </div>
-                `;
+                    </div>`;
             }).join('');
         }
 
@@ -958,10 +907,7 @@
         function saveSettings() {
             const url = document.getElementById('backend-url').value.trim().replace(/\/$/, '');
             const key = document.getElementById('api-key').value.trim();
-            if (!url) {
-                alert('Укажите адрес сервера');
-                return;
-            }
+            if (!url) { alert('Укажите адрес сервера'); return; }
             state.backendUrl = url;
             state.apiKey = key;
             localStorage.setItem('backendUrl', url);
@@ -969,30 +915,19 @@
             toggleSettings();
         }
 
-        // ============ СТАТУС СЕТИ ============
         function updateNetStatus() {
             const dot = document.getElementById('net-status');
-            if (navigator.onLine) {
-                dot.classList.remove('offline');
-            } else {
-                dot.classList.add('offline');
-            }
+            if (navigator.onLine) dot.classList.remove('offline');
+            else dot.classList.add('offline');
         }
         window.addEventListener('online', updateNetStatus);
         window.addEventListener('offline', updateNetStatus);
 
-        // ============ ИНИЦИАЛИЗАЦИЯ ============
-        function showError(msg) { alert(msg); }
-
         window.addEventListener('load', () => {
             updateNetStatus();
             renderHistory();
-            if (!state.backendUrl) {
-                toggleSettings();
-            } else {
-                showStage('scan');
-                startScanner();
-            }
+            if (!state.backendUrl) toggleSettings();
+            else { showStage('scan'); startScanner(); }
         });
 
         if ('serviceWorker' in navigator) {
