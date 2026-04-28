@@ -1,6 +1,9 @@
 // Поиск возврата покупателя по номеру и обновление доп. поля "Видео"
 const API = 'https://api.moysklad.ru/api/remap/1.2';
 
+// Возможные имена сущности возврата покупателя (МойСклад в разное время использовал разные)
+const POSSIBLE_ENTITIES = ['salesreturn', 'customerreturn', 'purchasereturn'];
+
 function authHeaders(token) {
   return {
     'Authorization': `Bearer ${token}`,
@@ -10,15 +13,39 @@ function authHeaders(token) {
   };
 }
 
+let entityName = null;        // запоминаем рабочее имя сущности
 let metadataCache = null;
 let metadataCacheTime = 0;
 const METADATA_TTL = 60 * 60 * 1000;
+
+// Подбираем правильное имя эндпоинта (один раз за время жизни процесса)
+async function detectEntityName(token) {
+  if (entityName) return entityName;
+
+  const errors = [];
+  for (const name of POSSIBLE_ENTITIES) {
+    try {
+      const r = await fetch(`${API}/entity/${name}/metadata`, { headers: authHeaders(token) });
+      if (r.ok) {
+        entityName = name;
+        console.log(`  МойСклад: использую сущность "${name}"`);
+        return name;
+      }
+      const text = await r.text();
+      errors.push(`${name}: ${r.status} ${text.slice(0, 200)}`);
+    } catch (e) {
+      errors.push(`${name}: ${e.message}`);
+    }
+  }
+  throw new Error(`МойСклад: ни один эндпоинт возврата покупателя не подошёл. Попытки: ${errors.join(' | ')}`);
+}
 
 async function getReturnMetadata(token) {
   const now = Date.now();
   if (metadataCache && now - metadataCacheTime < METADATA_TTL) return metadataCache;
 
-  const r = await fetch(`${API}/entity/customerreturn/metadata`, { headers: authHeaders(token) });
+  const name = await detectEntityName(token);
+  const r = await fetch(`${API}/entity/${name}/metadata`, { headers: authHeaders(token) });
   if (!r.ok) {
     const text = await r.text();
     throw new Error(`МойСклад: метаданные не получены: ${r.status} ${text}`);
@@ -41,7 +68,8 @@ async function findVideoAttribute(token, fieldName) {
 }
 
 async function findReturnByNumber(token, returnNumber) {
-  const url = `${API}/entity/customerreturn?filter=name=${encodeURIComponent(returnNumber)}&limit=1`;
+  const name = await detectEntityName(token);
+  const url = `${API}/entity/${name}?filter=name=${encodeURIComponent(returnNumber)}&limit=1`;
   const r = await fetch(url, { headers: authHeaders(token) });
   if (!r.ok) {
     const text = await r.text();
@@ -77,7 +105,8 @@ async function updateAttribute(token, returnEntity, attributeMeta, value) {
   }
   if (!replaced) updatedAttrs.push(attrPayload);
 
-  const url = `${API}/entity/customerreturn/${returnEntity.id}`;
+  const name = await detectEntityName(token);
+  const url = `${API}/entity/${name}/${returnEntity.id}`;
   const r = await fetch(url, {
     method: 'PUT',
     headers: authHeaders(token),
