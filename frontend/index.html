@@ -15,18 +15,11 @@
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&display=swap');
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
         :root {
-            --bg: #0a0a0a;
-            --bg-soft: #141414;
-            --bg-card: #1a1a1a;
-            --border: #2a2a2a;
-            --accent: #ff6b35;
+            --bg: #0a0a0a; --bg-soft: #141414; --bg-card: #1a1a1a;
+            --border: #2a2a2a; --accent: #ff6b35;
             --accent-glow: rgba(255, 107, 53, 0.15);
-            --success: #4ade80;
-            --error: #ef4444;
-            --warning: #fbbf24;
-            --text: #f5f5f5;
-            --text-dim: #888;
-            --text-mute: #555;
+            --success: #4ade80; --error: #ef4444; --warning: #fbbf24;
+            --text: #f5f5f5; --text-dim: #888; --text-mute: #555;
         }
         html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
         body {
@@ -39,8 +32,7 @@
         .app {
             display: flex; flex-direction: column;
             height: 100vh; height: 100dvh;
-            max-width: 480px; margin: 0 auto;
-            background: var(--bg);
+            max-width: 480px; margin: 0 auto; background: var(--bg);
         }
         .header {
             padding: 20px 20px 12px;
@@ -60,69 +52,71 @@
         }
         .status-dot.offline { background: var(--error); box-shadow: 0 0 8px var(--error); }
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
-        .main {
-            flex: 1; overflow-y: auto;
-            -webkit-overflow-scrolling: touch;
-            padding: 24px 20px;
-        }
+        .main { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 24px 20px; }
         .steps { display: flex; gap: 8px; margin-bottom: 32px; }
-        .step {
-            flex: 1; height: 3px;
-            background: var(--border); border-radius: 2px;
-            transition: background 0.4s ease;
-        }
+        .step { flex: 1; height: 3px; background: var(--border); border-radius: 2px; transition: background 0.4s ease; }
         .step.active { background: var(--accent); }
         .step.done { background: var(--success); }
         .stage-label {
-            font-size: 11px; font-weight: 700;
-            letter-spacing: 0.15em; text-transform: uppercase;
-            color: var(--text-mute); margin-bottom: 8px;
+            font-size: 11px; font-weight: 700; letter-spacing: 0.15em;
+            text-transform: uppercase; color: var(--text-mute); margin-bottom: 8px;
         }
         .stage-title {
-            font-size: 28px; font-weight: 800;
-            letter-spacing: -0.02em; margin-bottom: 24px;
-            line-height: 1.1;
+            font-size: 28px; font-weight: 800; letter-spacing: -0.02em;
+            margin-bottom: 24px; line-height: 1.1;
         }
         .card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 16px;
-            padding: 20px; margin-bottom: 16px;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 16px; padding: 20px; margin-bottom: 16px;
         }
         .card-label {
-            font-size: 11px; font-weight: 700;
-            letter-spacing: 0.1em; text-transform: uppercase;
-            color: var(--text-mute); margin-bottom: 8px;
+            font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+            text-transform: uppercase; color: var(--text-mute); margin-bottom: 8px;
         }
         .card-value {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 18px; font-weight: 500;
-            word-break: break-all;
+            font-size: 18px; font-weight: 500; word-break: break-all;
         }
 
+        /* === Баннер несинхронизированных === */
+        .pending-banner {
+            background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(251, 191, 36, 0.05));
+            border: 1px solid rgba(251, 191, 36, 0.4);
+            border-radius: 16px;
+            padding: 14px 16px; margin-bottom: 20px;
+            display: flex; align-items: center; gap: 12px;
+            cursor: pointer;
+        }
+        .pending-icon { color: var(--warning); flex-shrink: 0; }
+        .pending-info { flex: 1; min-width: 0; }
+        .pending-title { font-size: 13px; font-weight: 700; color: var(--warning); margin-bottom: 2px; }
+        .pending-desc { font-size: 12px; color: var(--text-dim); }
+        .pending-arrow { color: var(--warning); flex-shrink: 0; }
+        .pending-list-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 0; border-bottom: 1px solid var(--border);
+        }
+        .pending-list-item:last-child { border-bottom: none; }
+        .pending-list-code {
+            font-family: 'JetBrains Mono', monospace;
+            flex: 1; font-size: 13px;
+        }
+        .pending-list-time { font-size: 11px; color: var(--text-mute); font-family: 'JetBrains Mono', monospace; }
+
+        /* === Сканер === */
         #scanner-container {
             position: relative; background: #000;
             border-radius: 16px; overflow: hidden;
             margin-bottom: 20px; aspect-ratio: 4 / 5;
         }
-        #qr-reader {
-            position: absolute; inset: 0;
-            width: 100%; height: 100%;
-        }
-        #qr-reader video {
-            width: 100% !important; height: 100% !important;
-            object-fit: cover !important;
-        }
-        #qr-reader__scan_region {
-            background: transparent !important;
-            min-height: 100% !important;
-        }
+        #qr-reader { position: absolute; inset: 0; width: 100%; height: 100%; }
+        #qr-reader video { width: 100% !important; height: 100% !important; object-fit: cover !important; }
+        #qr-reader__scan_region { background: transparent !important; min-height: 100% !important; }
         #qr-reader__scan_region img { display: none !important; }
         #qr-reader__dashboard { display: none !important; }
         .scanner-hint {
-            position: absolute; bottom: 16px;
-            left: 50%; transform: translateX(-50%);
-            font-size: 13px;
+            position: absolute; bottom: 16px; left: 50%;
+            transform: translateX(-50%); font-size: 13px;
             color: rgba(255, 255, 255, 0.85);
             background: rgba(0, 0, 0, 0.6);
             padding: 8px 16px; border-radius: 100px;
@@ -130,6 +124,7 @@
             white-space: nowrap; z-index: 10;
         }
 
+        /* === Запись === */
         #video-container {
             position: relative; background: #000;
             border-radius: 16px; overflow: hidden;
@@ -145,12 +140,20 @@
             font-family: 'JetBrains Mono', monospace;
             font-size: 14px; font-weight: 500;
         }
-        .rec-dot {
-            width: 10px; height: 10px; border-radius: 50%;
-            background: var(--error);
-            animation: rec-blink 1s ease-in-out infinite;
-        }
+        .rec-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--error); animation: rec-blink 1s ease-in-out infinite; }
         @keyframes rec-blink { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+        .save-badge {
+            position: absolute; top: 16px; right: 16px;
+            background: rgba(74, 222, 128, 0.85);
+            color: #000;
+            padding: 6px 10px; border-radius: 100px;
+            font-size: 11px; font-weight: 700;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .save-badge.visible { opacity: 1; }
+
+        /* === Кнопки === */
         .btn {
             width: 100%; padding: 18px 24px;
             border: none; border-radius: 14px;
@@ -164,170 +167,71 @@
         .btn-primary { background: var(--accent); color: #000; box-shadow: 0 0 30px var(--accent-glow); }
         .btn-danger { background: var(--error); color: #fff; }
         .btn-secondary { background: var(--bg-card); color: var(--text); border: 1px solid var(--border); }
-        .btn-success { background: var(--success); color: #000; }
+        .btn-warning { background: var(--warning); color: #000; }
         .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-        .btn-row {
-            display: grid; grid-template-columns: 1fr 1fr;
-            gap: 10px; margin-bottom: 12px;
-        }
+
+        /* === Прогресс === */
         .progress-wrap { margin-top: 20px; }
-        .progress-bar {
-            height: 6px; background: var(--border);
-            border-radius: 3px; overflow: hidden; margin-bottom: 8px;
-        }
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--accent), #ff8c5a);
-            border-radius: 3px;
-            transition: width 0.3s ease;
-            width: 0%;
-        }
-        .progress-text {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 13px; color: var(--text-dim);
-            display: flex; justify-content: space-between;
-        }
+        .progress-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #ff8c5a); border-radius: 3px; transition: width 0.3s ease; width: 0%; }
+        .progress-text { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--text-dim); display: flex; justify-content: space-between; }
         .status-msg {
             display: flex; align-items: flex-start; gap: 12px;
             padding: 14px 16px; border-radius: 12px;
             margin-bottom: 16px; font-size: 14px; line-height: 1.4;
-        }
-        .status-msg.success {
-            background: rgba(74, 222, 128, 0.1);
-            border: 1px solid rgba(74, 222, 128, 0.3);
-            color: var(--success);
         }
         .status-msg.error {
             background: rgba(239, 68, 68, 0.1);
             border: 1px solid rgba(239, 68, 68, 0.3);
             color: var(--error);
         }
-        .status-msg.warning {
-            background: rgba(251, 191, 36, 0.1);
-            border: 1px solid rgba(251, 191, 36, 0.3);
-            color: var(--warning);
-        }
-        .status-msg.info {
-            background: rgba(255, 107, 53, 0.08);
-            border: 1px solid rgba(255, 107, 53, 0.25);
-            color: var(--accent);
-        }
         .status-icon { flex-shrink: 0; width: 18px; height: 18px; margin-top: 1px; }
+
+        /* === Иконки больших экранов === */
         .done-screen { text-align: center; padding: 40px 20px; }
-        .done-icon {
-            width: 80px; height: 80px; border-radius: 50%;
-            background: var(--success);
-            display: flex; align-items: center; justify-content: center;
-            margin: 0 auto 24px;
-            animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        .warn-icon {
-            width: 80px; height: 80px; border-radius: 50%;
-            background: var(--warning);
-            display: flex; align-items: center; justify-content: center;
-            margin: 0 auto 24px;
-            animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        .err-icon {
-            width: 80px; height: 80px; border-radius: 50%;
-            background: var(--error);
-            display: flex; align-items: center; justify-content: center;
-            margin: 0 auto 24px;
-            animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-        }
-        @keyframes pop {
-            0% { transform: scale(0); }
-            100% { transform: scale(1); }
-        }
+        .done-icon { width: 80px; height: 80px; border-radius: 50%; background: var(--success); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .warn-icon { width: 80px; height: 80px; border-radius: 50%; background: var(--warning); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .err-icon { width: 80px; height: 80px; border-radius: 50%; background: var(--error); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        @keyframes pop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
         .done-title { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
         .done-subtitle { color: var(--text-dim); margin-bottom: 32px; font-size: 14px; }
         .editable-code {
             font-family: 'JetBrains Mono', monospace;
-            font-size: 18px;
-            width: 100%;
-            padding: 12px 14px;
-            background: var(--bg);
-            border: 2px solid var(--border);
-            border-radius: 10px;
-            color: var(--text);
-            margin-top: 8px;
+            font-size: 18px; width: 100%;
+            padding: 12px 14px; background: var(--bg);
+            border: 2px solid var(--border); border-radius: 10px;
+            color: var(--text); margin-top: 8px;
         }
         .editable-code:focus { outline: none; border-color: var(--accent); }
+
+        /* === История === */
         .history { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border); }
-        .history-title {
-            font-size: 11px; font-weight: 700;
-            letter-spacing: 0.15em; text-transform: uppercase;
-            color: var(--text-mute); margin-bottom: 12px;
-        }
-        .history-item {
-            display: flex; align-items: center; gap: 12px;
-            padding: 12px 0; border-bottom: 1px solid var(--border);
-            font-size: 13px;
-        }
+        .history-title { font-size: 11px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-mute); margin-bottom: 12px; }
+        .history-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
         .history-item:last-child { border-bottom: none; }
         .history-status { width: 8px; height: 8px; border-radius: 50%; background: var(--success); flex-shrink: 0; }
         .history-status.error { background: var(--error); }
         .history-code { font-family: 'JetBrains Mono', monospace; flex: 1; color: var(--text); }
         .history-time { font-family: 'JetBrains Mono', monospace; color: var(--text-mute); font-size: 11px; }
+
+        /* === Настройки === */
         .settings-toggle { background: none; border: none; color: var(--text-mute); font-size: 12px; cursor: pointer; padding: 8px; }
-        .settings-panel {
-            position: fixed; inset: 0;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(8px);
-            z-index: 100;
-            display: none; align-items: flex-end; justify-content: center;
-        }
+        .settings-panel { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 100; display: none; align-items: flex-end; justify-content: center; }
         .settings-panel.open { display: flex; }
-        .settings-content {
-            background: var(--bg-card);
-            width: 100%; max-width: 480px;
-            border-radius: 24px 24px 0 0;
-            padding: 24px 20px 40px;
-            border-top: 1px solid var(--border);
-            animation: slide-up 0.3s ease;
-        }
+        .settings-content { background: var(--bg-card); width: 100%; max-width: 480px; border-radius: 24px 24px 0 0; padding: 24px 20px 40px; border-top: 1px solid var(--border); animation: slide-up 0.3s ease; }
         @keyframes slide-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
         .settings-title { font-size: 20px; font-weight: 800; margin-bottom: 20px; }
         .form-group { margin-bottom: 16px; }
-        .form-label {
-            display: block; font-size: 12px; font-weight: 600;
-            color: var(--text-dim); margin-bottom: 6px;
-            text-transform: uppercase; letter-spacing: 0.05em;
-        }
-        .form-input {
-            width: 100%; padding: 14px 16px;
-            background: var(--bg); border: 1px solid var(--border);
-            border-radius: 10px; color: var(--text);
-            font-family: 'JetBrains Mono', monospace; font-size: 14px;
-        }
+        .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-dim); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .form-input { width: 100%; padding: 14px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 14px; }
         .form-input:focus { outline: none; border-color: var(--accent); }
         .manual-input-wrap { margin-top: 12px; text-align: center; }
-        .manual-link {
-            background: none; border: none;
-            color: var(--text-dim); font-size: 13px;
-            text-decoration: underline; cursor: pointer;
-        }
+        .manual-link { background: none; border: none; color: var(--text-dim); font-size: 13px; text-decoration: underline; cursor: pointer; }
         .hidden { display: none !important; }
-        .spinner {
-            width: 18px; height: 18px;
-            border: 2px solid rgba(0, 0, 0, 0.2);
-            border-top-color: #000; border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-        .spinner.light { border-color: rgba(255, 255, 255, 0.2); border-top-color: #fff; }
+        .spinner { width: 18px; height: 18px; border: 2px solid rgba(0,0,0,0.2); border-top-color: #000; border-radius: 50%; animation: spin 0.8s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .check-loading {
-            text-align: center;
-            padding: 40px 20px;
-        }
-        .check-spinner {
-            width: 60px; height: 60px;
-            border: 4px solid var(--border);
-            border-top-color: var(--accent);
-            border-radius: 50%;
-            margin: 0 auto 24px;
-            animation: spin 0.8s linear infinite;
-        }
+        .check-loading { text-align: center; padding: 40px 20px; }
+        .check-spinner { width: 60px; height: 60px; border: 4px solid var(--border); border-top-color: var(--accent); border-radius: 50%; margin: 0 auto 24px; animation: spin 0.8s linear infinite; }
     </style>
 </head>
 <body>
@@ -345,6 +249,9 @@
                 <div class="step" id="step-2"></div>
                 <div class="step" id="step-3"></div>
             </div>
+
+            <!-- БАННЕР НЕСИНХРОНИЗИРОВАННЫХ -->
+            <div id="pending-banner" class="hidden"></div>
 
             <!-- ЭТАП: СКАН -->
             <div id="stage-scan">
@@ -425,6 +332,7 @@
                         <div class="rec-dot"></div>
                         <span id="rec-timer">00:00</span>
                     </div>
+                    <div class="save-badge" id="save-badge">💾 Сохранено</div>
                 </div>
                 <button class="btn btn-primary" id="btn-record" onclick="toggleRecording()">🎥 Начать запись</button>
                 <div style="margin-top: 12px;">
@@ -493,7 +401,73 @@
         </div>
     </div>
 
-    <script>
+    <script>// ============================================================
+        // INDEXEDDB: надёжное хранилище видео между сессиями
+        // ============================================================
+        const DB_NAME = 'warehouse-returns';
+        const DB_VERSION = 1;
+        const STORE = 'pending';
+
+        let dbInstance = null;
+
+        function openDB() {
+            if (dbInstance) return Promise.resolve(dbInstance);
+            return new Promise((resolve, reject) => {
+                const req = indexedDB.open(DB_NAME, DB_VERSION);
+                req.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains(STORE)) {
+                        db.createObjectStore(STORE, { keyPath: 'barcode' });
+                    }
+                };
+                req.onsuccess = () => { dbInstance = req.result; resolve(dbInstance); };
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        async function dbPut(record) {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE, 'readwrite');
+                tx.objectStore(STORE).put(record);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        async function dbGet(barcode) {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE, 'readonly');
+                const req = tx.objectStore(STORE).get(barcode);
+                req.onsuccess = () => resolve(req.result);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        async function dbDelete(barcode) {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE, 'readwrite');
+                tx.objectStore(STORE).delete(barcode);
+                tx.oncomplete = () => resolve();
+                tx.onerror = () => reject(tx.error);
+            });
+        }
+
+        async function dbList() {
+            const db = await openDB();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE, 'readonly');
+                const req = tx.objectStore(STORE).getAll();
+                req.onsuccess = () => resolve(req.result || []);
+                req.onerror = () => reject(req.error);
+            });
+        }
+
+        // ============================================================
+        // СОСТОЯНИЕ
+        // ============================================================
         const state = {
             barcode: null,
             videoBlob: null,
@@ -530,7 +504,9 @@
             }
         }
 
-        // ============ СКАНИРОВАНИЕ ============
+        // ============================================================
+        // СКАНИРОВАНИЕ
+        // ============================================================
         function startScanner() {
             if (state.scanner) state.scanner.clear().catch(() => {});
             state.scanner = new Html5Qrcode("qr-reader");
@@ -590,7 +566,9 @@
             }
         }
 
-        // ============ ПРОВЕРКА В МОЙСКЛАД ============
+        // ============================================================
+        // ПРОВЕРКА В МОЙСКЛАД
+        // ============================================================
         async function checkBarcodeOnServer() {
             showStage('check');
             document.getElementById('check-barcode').textContent = state.barcode;
@@ -608,7 +586,6 @@
                     body: JSON.stringify({ barcode: state.barcode })
                 });
                 const data = await r.json();
-
                 if (!r.ok) throw new Error(data.error || 'Ошибка проверки');
 
                 if (data.status === 'not_found') {
@@ -630,10 +607,7 @@
 
         async function createReturnAndProceed() {
             const correctedCode = document.getElementById('notfound-input').value.trim();
-            if (!correctedCode) {
-                alert('Введите номер возврата');
-                return;
-            }
+            if (!correctedCode) { alert('Введите номер возврата'); return; }
             state.barcode = correctedCode;
 
             const btn = document.getElementById('btn-create');
@@ -642,7 +616,6 @@
             btn.innerHTML = '<div class="spinner"></div> Создаём...';
 
             try {
-                // Если поправили номер — снова проверяем (вдруг этот уже есть)
                 const checkResp = await fetch(state.backendUrl + '/api/check-barcode', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -658,13 +631,11 @@
                     return;
                 }
                 if (checkData.status === 'ready') {
-                    // Уже существует и пуст — просто переходим к записи
                     btn.disabled = false; btn.innerHTML = origText;
                     startRecording();
                     return;
                 }
 
-                // not_found → создаём
                 const createResp = await fetch(state.backendUrl + '/api/create-return', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -681,7 +652,9 @@
             }
         }
 
-        // ============ ЗАПИСЬ ВИДЕО ============
+        // ============================================================
+        // ЗАПИСЬ ВИДЕО (с автосохранением в IndexedDB)
+        // ============================================================
         async function startRecording() {
             showStage('record');
             document.getElementById('display-barcode').textContent = state.barcode;
@@ -689,6 +662,7 @@
             btn.className = 'btn btn-primary';
             btn.innerHTML = '🎥 Начать запись';
             document.getElementById('rec-ind').classList.add('hidden');
+            document.getElementById('save-badge').classList.remove('visible');
 
             try {
                 state.stream = await navigator.mediaDevices.getUserMedia({
@@ -718,13 +692,22 @@
             } catch (e) {
                 state.recorder = new MediaRecorder(state.stream);
             }
-            state.recorder.ondataavailable = e => {
-                if (e.data && e.data.size > 0) state.chunks.push(e.data);
+
+            state.recorder.ondataavailable = async (e) => {
+                if (e.data && e.data.size > 0) {
+                    state.chunks.push(e.data);
+                    // Промежуточное сохранение каждые ~3 секунды
+                    if (state.chunks.length % 3 === 0) {
+                        await saveChunksToDB(false);
+                    }
+                }
             };
-            state.recorder.onstop = () => {
+            state.recorder.onstop = async () => {
                 const ext = state.recorder.mimeType.includes('mp4') ? 'mp4' : 'webm';
                 state.videoBlob = new Blob(state.chunks, { type: state.recorder.mimeType });
                 state.videoBlob.fileExtension = ext;
+                // Финальное сохранение перед загрузкой
+                await saveChunksToDB(true);
                 uploadVideo();
             };
             state.recorder.start(1000);
@@ -737,6 +720,28 @@
             state.recTimer = setInterval(updateTimer, 1000);
             updateTimer();
             if (navigator.vibrate) navigator.vibrate(50);
+        }
+
+        async function saveChunksToDB(isFinal) {
+            try {
+                if (!state.barcode || !state.chunks.length) return;
+                const blob = new Blob(state.chunks, { type: state.recorder?.mimeType || 'video/mp4' });
+                const ext = (state.recorder?.mimeType || '').includes('mp4') ? 'mp4' : 'webm';
+                await dbPut({
+                    barcode: state.barcode,
+                    blob: blob,
+                    mimeType: state.recorder?.mimeType || 'video/mp4',
+                    ext: ext,
+                    savedAt: Date.now(),
+                    finalized: isFinal,
+                });
+                // Лёгкая визуальная отметка о сохранении
+                const badge = document.getElementById('save-badge');
+                badge.classList.add('visible');
+                setTimeout(() => badge.classList.remove('visible'), 1500);
+            } catch (e) {
+                console.warn('Не удалось сохранить в IndexedDB:', e);
+            }
         }
 
         function updateTimer() {
@@ -762,9 +767,12 @@
             state.videoBlob = null;
             showStage('scan');
             startScanner();
+            renderPendingBanner();
         }
 
-        // ============ ЗАГРУЗКА ============
+        // ============================================================
+        // ЗАГРУЗКА (новая или повторная из IndexedDB)
+        // ============================================================
         async function uploadVideo() {
             showStage('upload');
             const ext = state.videoBlob.fileExtension || 'mp4';
@@ -788,8 +796,11 @@
                 updateProgress(0, 'Подключение к серверу...');
                 await uploadWithProgress(formData);
                 updateProgress(100, 'Готово');
+                // Удаляем из IndexedDB после успеха
+                await dbDelete(state.barcode);
                 addToHistory(state.barcode, true);
                 showDone();
+                renderPendingBanner();
             } catch (err) {
                 showUploadError(err.message || String(err));
                 addToHistory(state.barcode, false);
@@ -840,9 +851,12 @@
                     </svg>
                     <div>${msg}</div>
                 </div>
-                <button class="btn btn-secondary" onclick="uploadVideo()" style="margin-top: 12px;">↻ Повторить попытку</button>
+                <div style="font-size: 12px; color: var(--text-mute); margin-bottom: 14px; padding: 0 4px;">
+                    💾 Видео сохранено в памяти приложения. Можно повторить сейчас или позже — оно не потеряется.
+                </div>
+                <button class="btn btn-primary" onclick="uploadVideo()">↻ Повторить попытку</button>
                 <div style="height: 8px;"></div>
-                <button class="btn btn-secondary" onclick="resetAndScan()">← Начать заново</button>
+                <button class="btn btn-secondary" onclick="resetAndScan()">← Позже</button>
             `;
         }
 
@@ -863,9 +877,118 @@
             document.getElementById('rec-ind').classList.add('hidden');
             showStage('scan');
             startScanner();
+            renderPendingBanner();
         }
 
-        // ============ ИСТОРИЯ ============
+        // ============================================================
+        // БАННЕР И ПОВТОР НЕСИНХРОНИЗИРОВАННЫХ
+        // ============================================================
+        async function renderPendingBanner() {
+            const banner = document.getElementById('pending-banner');
+            try {
+                const items = await dbList();
+                if (!items || items.length === 0) {
+                    banner.classList.add('hidden');
+                    banner.innerHTML = '';
+                    return;
+                }
+                const single = items.length === 1;
+                banner.classList.remove('hidden');
+                banner.className = 'pending-banner';
+                banner.innerHTML = `
+                    <svg class="pending-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                    </svg>
+                    <div class="pending-info">
+                        <div class="pending-title">Несинхронизированные видео: ${items.length}</div>
+                        <div class="pending-desc">Нажмите чтобы повторить загрузку</div>
+                    </div>
+                    <svg class="pending-arrow" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                `;
+                banner.onclick = () => showPendingDialog(items);
+            } catch (e) {
+                console.warn('renderPendingBanner:', e);
+            }
+        }
+
+        async function showPendingDialog(items) {
+            // Простой выбор: если одна — сразу повторить, если несколько — показать список
+            if (items.length === 1) {
+                retryPending(items[0]);
+                return;
+            }
+            // Отрисовка простого модального окна на месте main
+            const main = document.querySelector('.main');
+            const html = `
+                <div class="stage-label">Несинхронизированные</div>
+                <div class="stage-title">Повторить загрузку</div>
+                <div class="card">
+                    ${items.map(it => `
+                        <div class="pending-list-item">
+                            <div class="pending-list-code">${escapeHtml(it.barcode)}</div>
+                            <div class="pending-list-time">${formatTime(it.savedAt)}</div>
+                            <button class="btn btn-warning" style="width: auto; padding: 8px 14px; font-size: 13px;" data-bc="${escapeHtml(it.barcode)}">Загрузить</button>
+                        </div>
+                    `).join('')}
+                </div>
+                <button class="btn btn-secondary" id="pending-back">← Назад</button>
+            `;
+            main.dataset.savedHtml = main.innerHTML;
+            main.innerHTML = html;
+            main.querySelectorAll('button[data-bc]').forEach(b => {
+                b.onclick = async () => {
+                    const bc = b.getAttribute('data-bc');
+                    const rec = await dbGet(bc);
+                    if (rec) {
+                        main.innerHTML = main.dataset.savedHtml;
+                        delete main.dataset.savedHtml;
+                        bindPostRestoreHandlers();
+                        retryPending(rec);
+                    }
+                };
+            });
+            document.getElementById('pending-back').onclick = () => {
+                main.innerHTML = main.dataset.savedHtml;
+                delete main.dataset.savedHtml;
+                bindPostRestoreHandlers();
+                renderPendingBanner();
+            };
+        }
+
+        function bindPostRestoreHandlers() {
+            // После восстановления HTML главной — повторно навешиваем обработчики
+            // (они onclick="..." в разметке, поэтому ничего не нужно)
+            // Если пользователь был на сканировании — перезапустить
+            if (!document.getElementById('stage-scan').classList.contains('hidden')) {
+                startScanner();
+            }
+        }
+
+        function retryPending(record) {
+            state.barcode = record.barcode;
+            state.videoBlob = record.blob;
+            state.videoBlob.fileExtension = record.ext || 'mp4';
+            uploadVideo();
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, c => ({
+                '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+            }[c]));
+        }
+
+        function formatTime(ts) {
+            const d = new Date(ts);
+            return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+        }
+
+        // ============================================================
+        // ИСТОРИЯ
+        // ============================================================
         function addToHistory(code, success) {
             const item = { code, success, time: new Date().toISOString() };
             state.history.unshift(item);
@@ -888,13 +1011,15 @@
                 return `
                     <div class="history-item">
                         <div class="history-status ${i.success ? '' : 'error'}"></div>
-                        <div class="history-code">${i.code}</div>
+                        <div class="history-code">${escapeHtml(i.code)}</div>
                         <div class="history-time">${time}</div>
                     </div>`;
             }).join('');
         }
 
-        // ============ НАСТРОЙКИ ============
+        // ============================================================
+        // НАСТРОЙКИ
+        // ============================================================
         function toggleSettings() {
             const panel = document.getElementById('settings');
             panel.classList.toggle('open');
@@ -923,9 +1048,13 @@
         window.addEventListener('online', updateNetStatus);
         window.addEventListener('offline', updateNetStatus);
 
-        window.addEventListener('load', () => {
+        // ============================================================
+        // ИНИЦИАЛИЗАЦИЯ
+        // ============================================================
+        window.addEventListener('load', async () => {
             updateNetStatus();
             renderHistory();
+            await renderPendingBanner();
             if (!state.backendUrl) toggleSettings();
             else { showStage('scan'); startScanner(); }
         });
