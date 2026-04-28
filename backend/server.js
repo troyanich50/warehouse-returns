@@ -1,4 +1,4 @@
-// СКЛАД · ВОЗВРАТЫ — Бэкенд (с раздачей фронтенда)
+// СКЛАД · ВОЗВРАТЫ — Бэкенд
 
 import 'dotenv/config';
 import express from 'express';
@@ -28,7 +28,7 @@ app.use((req, res, next) => {
     res.setHeader('Access-Control-Allow-Origin', origin);
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-API-Key');
   if (req.method === 'OPTIONS') return res.sendStatus(204);
   next();
 });
@@ -42,7 +42,7 @@ const upload = multer({
   limits: { fileSize: 500 * 1024 * 1024 },
 });
 
-// ---------- Health-check ----------
+// ---------- Health ----------
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -53,15 +53,19 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// ---------- Главный endpoint ----------
-app.post('/api/upload', upload.single('video'), async (req, res) => {
+// ---------- Главный обработчик загрузки ----------
+async function handleUpload(req, res) {
   const startedAt = Date.now();
   const file = req.file;
   const barcode = (req.body.barcode || '').trim();
+  const filenameFromClient = (req.body.filename || '').trim();
   const user = (req.body.user || 'unknown').trim();
 
   console.log(`\n[${new Date().toISOString()}] Upload start`);
-  console.log(`  barcode: ${barcode}, user: ${user}, file: ${file?.size} bytes`);
+  console.log(`  barcode: ${barcode}`);
+  console.log(`  filename: ${filenameFromClient}`);
+  console.log(`  user: ${user}`);
+  console.log(`  file: ${file?.originalname} (${file?.size} bytes, ${file?.mimetype})`);
 
   if (!file) return res.status(400).json({ success: false, error: 'Видео не получено' });
   if (!barcode) {
@@ -73,15 +77,22 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
     return res.status(500).json({ success: false, error: 'Не настроен YANDEX_DISK_TOKEN' });
   }
 
-  const ext = path.extname(file.originalname) || '.mp4';
-  const remoteName = `${barcode}${ext}`;
+  // Имя на Диске: используем filename от клиента, если он есть, иначе собираем сами
+  let remoteName;
+  if (filenameFromClient && filenameFromClient.startsWith(barcode)) {
+    remoteName = filenameFromClient;
+  } else {
+    const ext = path.extname(file.originalname) || '.mp4';
+    remoteName = `${barcode}${ext}`;
+  }
+
   let warning = null;
 
   try {
     console.log('  → Yandex Disk: uploading...');
     const link = await uploadToYandexDisk({
       token: process.env.YANDEX_DISK_TOKEN,
-      folder: process.env.YANDEX_DISK_FOLDER || 'Возвраты',
+      folder: process.env.YANDEX_DISK_FOLDER || 'Returns',
       remoteName,
       localPath: file.path,
     });
@@ -115,7 +126,11 @@ app.post('/api/upload', upload.single('video'), async (req, res) => {
     cleanup(file.path);
     res.status(500).json({ success: false, error: e.message || 'Внутренняя ошибка' });
   }
-});
+}
+
+// Регистрируем endpoint под обоими именами — старым и новым
+app.post('/api/upload', upload.single('video'), handleUpload);
+app.post('/api/process-return', upload.single('video'), handleUpload);
 
 function cleanup(filePath) {
   if (filePath && fs.existsSync(filePath)) {
