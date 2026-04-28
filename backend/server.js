@@ -8,7 +8,11 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { uploadToYandexDisk } from './lib/yandex.js';
-import { updateReturnVideoField } from './lib/moysklad.js';
+import {
+  checkReturnByNumber,
+  createReturn,
+  updateReturnVideoField,
+} from './lib/moysklad.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
@@ -16,10 +20,9 @@ const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '*').split(',').map(s =>
 
 const app = express();
 
-// ---------- Раздаём фронтенд ----------
+app.use(express.json({ limit: '1mb' }));
 app.use(express.static(path.join(__dirname, '..', 'frontend')));
 
-// ---------- CORS ----------
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (ALLOWED_ORIGINS.includes('*')) {
@@ -33,7 +36,6 @@ app.use((req, res, next) => {
   next();
 });
 
-// ---------- Загрузка файлов ----------
 const UPLOAD_DIR = path.join(process.cwd(), 'tmp');
 if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
@@ -42,15 +44,71 @@ const upload = multer({
   limits: { fileSize: 500 * 1024 * 1024 },
 });
 
+const FIELD_NAME = process.env.MOYSKLAD_VIDEO_FIELD_NAME || 'Видео';
+
 // ---------- Health ----------
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     yandex: !!process.env.YANDEX_DISK_TOKEN,
     moysklad: !!process.env.MOYSKLAD_TOKEN,
-    folder: process.env.YANDEX_DISK_FOLDER || 'Возвраты',
-    field: process.env.MOYSKLAD_VIDEO_FIELD_NAME || 'Видео',
+    folder: process.env.YANDEX_DISK_FOLDER || 'Returns',
+    field: FIELD_NAME,
   });
+});
+
+// ---------- Проверка ШК в МойСклад ----------
+app.post('/api/check-barcode', async (req, res) => {
+  const barcode = (req.body && req.body.barcode || '').trim();
+  console.log(`\n[${new Date().toISOString()}] Check barcode: ${barcode}`);
+
+  if (!barcode) return res.status(400).json({ error: 'Не указан штрихкод' });
+  if (!process.env.MOYSKLAD_TOKEN) return res.status(500).json({ error: 'Не настроен MOYSKLAD_TOKEN' });
+
+  try {
+    const result = await checkReturnByNumber({
+      token: process.env.MOYSKLAD_TOKEN,
+      fieldName: FIELD_NAME,
+      returnNumber: barcode,
+    });
+    console.log(`  → ${result.status}`);
+    res.json(result);
+  } catch (e) {
+    console.error('  ✗', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ---------- Создание возврата ----------
+app.post('/api/create-return', async (req, res) => {
+  const barcode = (req.body && req.body.barcode || '').trim();
+  console.log(`\n[${new Date().toISOString()}] Create return: ${barcode}`);
+
+  if (!barcode) return res.status(400).json({ error: 'Не указан штрихкод' });
+  if (!process.env.MOYSKLAD_TOKEN) return res.status(500).json({ error: 'Не настроен MOYSKLAD_TOKEN' });
+
+  try {
+    // Сначала ещё раз проверим, что его действительно нет (на случай гонки)
+    const check = await checkReturnByNumber({
+      token: process.env.MOYSKLAD_TOKEN,
+      fieldName: FIELD_NAME,
+      returnNumber: barcode,
+    });
+    if (check.status !== 'not_found') {
+      console.log(`  ! документ уже существует (${check.status})`);
+      return res.json({ ok: true, alreadyExists: true });
+    }
+
+    const created = await createReturn({
+      token: process.env.MOYSKLAD_TOKEN,
+      returnNumber: barcode,
+    });
+    console.log(`  ✓ создан: ${created.entity}/${created.id}`);
+    res.json({ ok: true, entity: created.entity, id: created.id });
+  } catch (e) {
+    console.error('  ✗', e.message);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ---------- Главный обработчик загрузки ----------
@@ -77,7 +135,6 @@ async function handleUpload(req, res) {
     return res.status(500).json({ success: false, error: 'Не настроен YANDEX_DISK_TOKEN' });
   }
 
-  // Имя на Диске: используем filename от клиента, если он есть, иначе собираем сами
   let remoteName;
   if (filenameFromClient && filenameFromClient.startsWith(barcode)) {
     remoteName = filenameFromClient;
@@ -103,7 +160,7 @@ async function handleUpload(req, res) {
         console.log('  → МойСклад: updating return...');
         await updateReturnVideoField({
           token: process.env.MOYSKLAD_TOKEN,
-          fieldName: process.env.MOYSKLAD_VIDEO_FIELD_NAME || 'Видео',
+          fieldName: FIELD_NAME,
           returnNumber: barcode,
           link,
         });
@@ -128,7 +185,6 @@ async function handleUpload(req, res) {
   }
 }
 
-// Регистрируем endpoint под обоими именами — старым и новым
 app.post('/api/upload', upload.single('video'), handleUpload);
 app.post('/api/process-return', upload.single('video'), handleUpload);
 
