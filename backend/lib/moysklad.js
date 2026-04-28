@@ -1,7 +1,18 @@
-// Поиск возврата покупателя по номеру и обновление доп. поля "Видео"
+502 — это «сервер ушёл и не вернулся». Скорее всего, при коммите файла что-то сломалось — недостающая запятая, лишний символ. Сервис не смог запуститься после деплоя, и Render отдаёт 502 на любой запрос.
+Шаг 1: проверьте логи Render
+Откройте Render → ваш Web Service → Logs. Найдите свежие строки после последнего деплоя. Там должно быть либо:
+
+SyntaxError: ... или ReferenceError: ... — синтаксическая ошибка в коде
+Или процесс падает циклически — Exited with status 1 много раз подряд
+
+Пришлите сюда логи сразу после строки ==> Running 'cd backend && npm start' — там увидим точную ошибку.
+Шаг 2: пришлите текущий moysklad.js
+Параллельно — давайте я посмотрю, что у вас сейчас в файле. В GitHub откройте backend/lib/moysklad.js → нажмите Raw → скопируйте всё → вставьте сюда. Я найду место, где сломалось.
+Альтернатива — давайте я дам вам полный файл целиком
+Вместо точечных правок (которые мы делаем уже не первый раз и явно с ошибками) — вот полный готовый moysklad.js. Замените весь файл на этот код:
+js// Поиск возврата покупателя по номеру и обновление доп. поля "Видео"
 const API = 'https://api.moysklad.ru/api/remap/1.2';
 
-// Возможные имена сущности возврата покупателя (МойСклад в разное время использовал разные)
 const POSSIBLE_ENTITIES = ['salesreturn', 'customerreturn', 'purchasereturn'];
 
 function authHeaders(token) {
@@ -13,12 +24,18 @@ function authHeaders(token) {
   };
 }
 
-let entityName = null;        // запоминаем рабочее имя сущности
+let entityName = null;
 let metadataCache = null;
 let metadataCacheTime = 0;
 const METADATA_TTL = 60 * 60 * 1000;
 
-// Подбираем правильное имя эндпоинта (один раз за время жизни процесса)
+// Универсально достаём массив attributes — он бывает в форме [...] или {rows:[...]}
+function normalizeAttributes(input) {
+  if (Array.isArray(input)) return input;
+  if (input && Array.isArray(input.rows)) return input.rows;
+  return [];
+}
+
 async function detectEntityName(token) {
   if (entityName) return entityName;
 
@@ -58,13 +75,7 @@ async function getReturnMetadata(token) {
 
 async function findVideoAttribute(token, fieldName) {
   const meta = await getReturnMetadata(token);
-
-  // attributes может быть массивом, либо объектом { rows: [...] }, либо отсутствовать
-  let attrs = meta.attributes;
-  if (attrs && !Array.isArray(attrs) && Array.isArray(attrs.rows)) {
-    attrs = attrs.rows;
-  }
-  if (!Array.isArray(attrs)) attrs = [];
+  const attrs = normalizeAttributes(meta.attributes);
 
   console.log(`  МойСклад: найдено ${attrs.length} доп. полей в метаданных`);
 
@@ -93,12 +104,7 @@ async function findReturnByNumber(token, returnNumber) {
 }
 
 async function updateAttribute(token, returnEntity, attributeMeta, value) {
-  // attributes может быть массивом или объектом { rows: [...] }
-  let existing = returnEntity.attributes;
-  if (existing && !Array.isArray(existing) && Array.isArray(existing.rows)) {
-    existing = existing.rows;
-  }
-  if (!Array.isArray(existing)) existing = [];
+  const existing = normalizeAttributes(returnEntity.attributes);
 
   const attrPayload = {
     meta: attributeMeta.meta,
