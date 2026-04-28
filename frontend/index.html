@@ -144,6 +144,7 @@
             font-weight: 500;
             word-break: break-all;
         }
+
         #scanner-container {
             position: relative;
             background: #000;
@@ -152,11 +153,23 @@
             margin-bottom: 20px;
             aspect-ratio: 4 / 5;
         }
-        #scanner-container video {
+        #qr-reader {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+        }
+        #qr-reader video {
             width: 100% !important;
             height: 100% !important;
-            object-fit: cover;
+            object-fit: cover !important;
         }
+        #qr-reader__scan_region {
+            background: transparent !important;
+            min-height: 100% !important;
+        }
+        #qr-reader__scan_region img { display: none !important; }
+        #qr-reader__dashboard { display: none !important; }
         .scanner-hint {
             position: absolute;
             bottom: 16px;
@@ -171,6 +184,7 @@
             white-space: nowrap;
             z-index: 10;
         }
+
         #video-container {
             position: relative;
             background: #000;
@@ -648,4 +662,342 @@
                     Html5QrcodeSupportedFormats.EAN_8,
                     Html5QrcodeSupportedFormats.UPC_A,
                     Html5QrcodeSupportedFormats.UPC_E,
-                    Html5QrcodeSupportedF
+                    Html5QrcodeSupportedFormats.ITF,
+                    Html5QrcodeSupportedFormats.QR_CODE,
+                    Html5QrcodeSupportedFormats.DATA_MATRIX,
+                ]
+            };
+            state.scanner.start(
+                { facingMode: "environment" },
+                config,
+                onScanSuccess,
+                () => {}
+            ).catch(err => {
+                showError('Не удалось включить камеру: ' + err);
+            });
+        }
+
+        function onScanSuccess(decodedText) {
+            const code = decodedText.trim();
+            if (!code || code.length < 3) return;
+            if (navigator.vibrate) navigator.vibrate(100);
+            state.barcode = code;
+            stopScanner();
+            startRecording();
+        }
+
+        function stopScanner() {
+            if (state.scanner) {
+                state.scanner.stop().then(() => {
+                    state.scanner.clear();
+                }).catch(() => {});
+            }
+        }
+
+        function restartScanner() {
+            stopScanner();
+            setTimeout(startScanner, 300);
+        }
+
+        function manualInput() {
+            const code = prompt('Введите номер возврата вручную:');
+            if (code && code.trim()) {
+                state.barcode = code.trim();
+                stopScanner();
+                startRecording();
+            }
+        }
+
+        // ============ ЗАПИСЬ ВИДЕО ============
+        async function startRecording() {
+            showStage('record');
+            document.getElementById('display-barcode').textContent = state.barcode;
+            try {
+                state.stream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: true
+                });
+                const preview = document.getElementById('video-preview');
+                preview.srcObject = state.stream;
+            } catch (err) {
+                alert('Не удалось включить камеру: ' + err.message);
+                showStage('scan');
+                startScanner();
+            }
+        }
+
+        function toggleRecording() {
+            if (!state.recording) beginRecord();
+            else stopRecord();
+        }
+
+        function beginRecord() {
+            if (!state.stream) return;
+            state.chunks = [];
+            let mimeType = 'video/mp4';
+            if (!MediaRecorder.isTypeSupported(mimeType)) {
+                mimeType = 'video/webm;codecs=vp9,opus';
+            }
+            if (!MediaRecorder.isTypeSupported(mimeType)) {
+                mimeType = 'video/webm';
+            }
+            try {
+                state.recorder = new MediaRecorder(state.stream, {
+                    mimeType: mimeType,
+                    videoBitsPerSecond: 2500000
+                });
+            } catch (e) {
+                state.recorder = new MediaRecorder(state.stream);
+            }
+            state.recorder.ondataavailable = e => {
+                if (e.data && e.data.size > 0) state.chunks.push(e.data);
+            };
+            state.recorder.onstop = () => {
+                const ext = state.recorder.mimeType.includes('mp4') ? 'mp4' : 'webm';
+                state.videoBlob = new Blob(state.chunks, { type: state.recorder.mimeType });
+                state.videoBlob.fileExtension = ext;
+                uploadVideo();
+            };
+            state.recorder.start(1000);
+            state.recording = true;
+            state.recStartTime = Date.now();
+            document.getElementById('rec-ind').classList.remove('hidden');
+            const btn = document.getElementById('btn-record');
+            btn.className = 'btn btn-danger';
+            btn.innerHTML = '⏹ Остановить запись';
+            state.recTimer = setInterval(updateTimer, 1000);
+            updateTimer();
+            if (navigator.vibrate) navigator.vibrate(50);
+        }
+
+        function updateTimer() {
+            const elapsed = Math.floor((Date.now() - state.recStartTime) / 1000);
+            const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+            const s = String(elapsed % 60).padStart(2, '0');
+            document.getElementById('rec-timer').textContent = `${m}:${s}`;
+        }
+
+        function stopRecord() {
+            if (state.recorder && state.recording) {
+                state.recorder.stop();
+                state.recording = false;
+                clearInterval(state.recTimer);
+                if (state.stream) {
+                    state.stream.getTracks().forEach(t => t.stop());
+                }
+                if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
+            }
+        }
+
+        function cancelAndScan() {
+            if (state.stream) state.stream.getTracks().forEach(t => t.stop());
+            state.barcode = null;
+            showStage('scan');
+            startScanner();
+        }
+
+        // ============ ЗАГРУЗКА ============
+        async function uploadVideo() {
+            showStage('upload');
+            const ext = state.videoBlob.fileExtension || 'mp4';
+            const filename = `${state.barcode}.${ext}`;
+            const sizeMB = (state.videoBlob.size / 1024 / 1024).toFixed(1);
+            document.getElementById('upload-barcode').textContent = state.barcode;
+            document.getElementById('upload-filename').textContent = filename;
+            document.getElementById('upload-size').textContent = `${sizeMB} МБ`;
+
+            if (!state.backendUrl) {
+                showUploadError('Не настроен сервер. Откройте настройки (⚙).');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('barcode', state.barcode);
+            formData.append('filename', filename);
+            formData.append('video', state.videoBlob, filename);
+
+            try {
+                updateProgress(0, 'Подключение к серверу...');
+                const result = await uploadWithProgress(formData);
+                updateProgress(100, 'Готово');
+                addToHistory(state.barcode, true);
+                showDone();
+            } catch (err) {
+                showUploadError(err.message || String(err));
+                addToHistory(state.barcode, false);
+            }
+        }
+
+        function uploadWithProgress(formData) {
+            return new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', state.backendUrl + '/api/process-return');
+                if (state.apiKey) xhr.setRequestHeader('X-API-Key', state.apiKey);
+                xhr.timeout = 5 * 60 * 1000;
+                xhr.upload.onprogress = (e) => {
+                    if (e.lengthComputable) {
+                        const percent = Math.round((e.loaded / e.total) * 90);
+                        updateProgress(percent, 'Загрузка на сервер...');
+                    }
+                };
+                xhr.upload.onload = () => {
+                    updateProgress(95, 'Загрузка на Яндекс.Диск...');
+                };
+                xhr.onload = () => {
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        try {
+                            resolve(JSON.parse(xhr.responseText));
+                        } catch {
+                            resolve({});
+                        }
+                    } else {
+                        let msg = `Ошибка ${xhr.status}`;
+                        try {
+                            const r = JSON.parse(xhr.responseText);
+                            if (r.error) msg = r.error;
+                        } catch {}
+                        reject(new Error(msg));
+                    }
+                };
+                xhr.onerror = () => reject(new Error('Ошибка сети. Проверьте интернет.'));
+                xhr.ontimeout = () => reject(new Error('Превышено время ожидания. Попробуйте ещё раз.'));
+                xhr.send(formData);
+            });
+        }
+
+        function updateProgress(percent, status) {
+            document.getElementById('progress-fill').style.width = percent + '%';
+            document.getElementById('progress-percent').textContent = percent + '%';
+            document.getElementById('progress-status').textContent = status;
+        }
+
+        function showUploadError(msg) {
+            const div = document.getElementById('upload-msgs');
+            div.innerHTML = `
+                <div class="status-msg error">
+                    <svg class="status-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                    </svg>
+                    <div>${msg}</div>
+                </div>
+                <button class="btn btn-secondary" onclick="uploadVideo()" style="margin-top: 12px;">↻ Повторить попытку</button>
+                <div style="height: 8px;"></div>
+                <button class="btn btn-secondary" onclick="resetAndScan()">← Начать заново</button>
+            `;
+        }
+
+        function showDone() {
+            showStage('done');
+            document.getElementById('done-barcode').textContent = state.barcode;
+        }
+
+        function resetAndScan() {
+            state.barcode = null;
+            state.videoBlob = null;
+            state.chunks = [];
+            updateProgress(0, 'Подготовка...');
+            document.getElementById('upload-msgs').innerHTML = '';
+            const btn = document.getElementById('btn-record');
+            btn.className = 'btn btn-primary';
+            btn.innerHTML = '🎥 Начать запись';
+            document.getElementById('rec-ind').classList.add('hidden');
+            showStage('scan');
+            startScanner();
+        }
+
+        // ============ ИСТОРИЯ ============
+        function addToHistory(code, success) {
+            const item = {
+                code: code,
+                success: success,
+                time: new Date().toISOString()
+            };
+            state.history.unshift(item);
+            state.history = state.history.slice(0, 30);
+            localStorage.setItem('history', JSON.stringify(state.history));
+            renderHistory();
+        }
+
+        function renderHistory() {
+            const list = document.getElementById('history-list');
+            const today = new Date().toDateString();
+            const todayItems = state.history.filter(i => new Date(i.time).toDateString() === today);
+            if (todayItems.length === 0) {
+                list.innerHTML = '<div style="color: var(--text-mute); font-size: 13px; padding: 8px 0;">Ещё ничего не обработано</div>';
+                return;
+            }
+            list.innerHTML = todayItems.map(i => {
+                const t = new Date(i.time);
+                const time = `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`;
+                return `
+                    <div class="history-item">
+                        <div class="history-status ${i.success ? '' : 'error'}"></div>
+                        <div class="history-code">${i.code}</div>
+                        <div class="history-time">${time}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ============ НАСТРОЙКИ ============
+        function toggleSettings() {
+            const panel = document.getElementById('settings');
+            panel.classList.toggle('open');
+            if (panel.classList.contains('open')) {
+                document.getElementById('backend-url').value = state.backendUrl;
+                document.getElementById('api-key').value = state.apiKey;
+            }
+        }
+
+        function saveSettings() {
+            const url = document.getElementById('backend-url').value.trim().replace(/\/$/, '');
+            const key = document.getElementById('api-key').value.trim();
+            if (!url) {
+                alert('Укажите адрес сервера');
+                return;
+            }
+            state.backendUrl = url;
+            state.apiKey = key;
+            localStorage.setItem('backendUrl', url);
+            localStorage.setItem('apiKey', key);
+            toggleSettings();
+        }
+
+        // ============ СТАТУС СЕТИ ============
+        function updateNetStatus() {
+            const dot = document.getElementById('net-status');
+            if (navigator.onLine) {
+                dot.classList.remove('offline');
+            } else {
+                dot.classList.add('offline');
+            }
+        }
+        window.addEventListener('online', updateNetStatus);
+        window.addEventListener('offline', updateNetStatus);
+
+        // ============ ИНИЦИАЛИЗАЦИЯ ============
+        function showError(msg) { alert(msg); }
+
+        window.addEventListener('load', () => {
+            updateNetStatus();
+            renderHistory();
+            if (!state.backendUrl) {
+                toggleSettings();
+            } else {
+                showStage('scan');
+                startScanner();
+            }
+        });
+
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(() => {});
+        }
+    </script>
+</body>
+</html>
