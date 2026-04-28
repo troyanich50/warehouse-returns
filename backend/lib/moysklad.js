@@ -21,13 +21,14 @@ function normalizeAttributes(input) {
   return [];
 }
 
-async function findReturnByNumber(token, returnNumber) {
+// Сначала ищем документ через filter — получаем его id и сущность
+async function findReturnIdByNumber(token, returnNumber) {
   if (cachedEntity) {
     const url = `${API}/entity/${cachedEntity}?filter=name=${encodeURIComponent(returnNumber)}&limit=1`;
     const r = await fetch(url, { headers: authHeaders(token) });
     if (r.ok) {
       const data = await r.json();
-      if (data.rows && data.rows.length > 0) return { entity: cachedEntity, doc: data.rows[0] };
+      if (data.rows && data.rows.length > 0) return { entity: cachedEntity, id: data.rows[0].id };
     }
     cachedEntity = null;
   }
@@ -47,7 +48,7 @@ async function findReturnByNumber(token, returnNumber) {
       if (rows.length > 0) {
         cachedEntity = name;
         console.log(`  МойСклад: документ найден в сущности "${name}"`);
-        return { entity: name, doc: rows[0] };
+        return { entity: name, id: rows[0].id };
       }
     } catch (e) {
       report.push(`${name}: ошибка ${e.message}`);
@@ -57,31 +58,71 @@ async function findReturnByNumber(token, returnNumber) {
   throw new Error(`МойСклад: возврат "${returnNumber}" не найден. ${report.join(' | ')}`);
 }
 
+// Запрашиваем полный документ по id — здесь attributes будет
+async function fetchFullDoc(token, entity, id) {
+  const url = `${API}/entity/${entity}/${id}`;
+  const r = await fetch(url, { headers: authHeaders(token) });
+  if (!r.ok) {
+    const text = await r.text();
+    throw new Error(`МойСклад: не удалось получить документ ${id}: ${r.status} ${text}`);
+  }
+  return r.json();
+}
+
 async function updateDocVideoField({ token, entity, doc, fieldName, link }) {
   const existing = normalizeAttributes(doc.attributes);
 
   console.log(`  МойСклад: в документе ${existing.length} доп. полей: [${existing.map(a => a.name).join(', ')}]`);
 
   const fieldInDoc = existing.find(a => a.name === fieldName);
-  if (!fieldInDoc) {
-    throw new Error(
-      `МойСклад: поле "${fieldName}" не найдено в документе. ` +
-      `Доступные поля в документе: [${existing.map(a => a.name).join(', ') || 'нет ни одного'}]`
-    );
+
+  // Если поле уже есть в документе — обновляем, иначе нужны метаданные поля
+  let attrPayload;
+  if (fieldInDoc) {
+    attrPayload = {
+      meta: fieldInDoc.meta,
+      id: fieldInDoc.id,
+      name: fieldInDoc.name,
+      value: link,
+    };
+  } else {
+    // Поле ещё ни разу не заполнялось — берём его описание из metadata сущности
+    console.log(`  МойСклад: поле "${fieldName}" в документе пустое, ищем в metadata сущности "${entity}"`);
+    const metaUrl = `${API}/entity/${entity}/metadata/attributes`;
+    const r = await fetch(metaUrl, { headers: authHeaders(token) });
+    if (!r.ok) {
+      const text = await r.text();
+      throw new Error(`МойСклад: не удалось получить список атрибутов сущности: ${r.status} ${text}`);
+    }
+    const data = await r.json();
+    const allAttrs = normalizeAttributes(data);
+    console.log(`  МойСклад: всего атрибутов в сущности "${entity}": ${allAttrs.length} [${allAttrs.map(a => a.name).join(', ')}]`);
+    const fieldMeta = allAttrs.find(a => a.name === fieldName);
+    if (!fieldMeta) {
+      throw new Error(
+        `МойСклад: поле "${fieldName}" не найдено в атрибутах сущности "${entity}". ` +
+        `Доступные: [${allAttrs.map(a => a.name).join(', ') || 'нет'}]`
+      );
+    }
+    attrPayload = {
+      meta: fieldMeta.meta,
+      id: fieldMeta.id,
+      name: fieldMeta.name,
+      value: link,
+    };
   }
 
-  const attrPayload = {
-    meta: fieldInDoc.meta,
-    id: fieldInDoc.id,
-    name: fieldInDoc.name,
-    value: link,
-  };
-
-  const updatedAttrs = existing.map(a =>
-    a.id === fieldInDoc.id
-      ? attrPayload
-      : { meta: a.meta, id: a.id, name: a.name, value: a.value }
-  );
+  const updatedAttrs = [];
+  let replaced = false;
+  for (const a of existing) {
+    if (fieldInDoc && a.id === fieldInDoc.id) {
+      updatedAttrs.push(attrPayload);
+      replaced = true;
+    } else {
+      updatedAttrs.push({ meta: a.meta, id: a.id, name: a.name, value: a.value });
+    }
+  }
+  if (!replaced) updatedAttrs.push(attrPayload);
 
   const url = `${API}/entity/${entity}/${doc.id}`;
   const r = await fetch(url, {
@@ -97,6 +138,7 @@ async function updateDocVideoField({ token, entity, doc, fieldName, link }) {
 
 export async function updateReturnVideoField({ token, fieldName, returnNumber, link }) {
   if (!token) throw new Error('Не указан MOYSKLAD_TOKEN');
-  const { entity, doc } = await findReturnByNumber(token, returnNumber);
+  const { entity, id } = await findReturnIdByNumber(token, returnNumber);
+  const doc = await fetchFullDoc(token, entity, id);
   await updateDocVideoField({ token, entity, doc, fieldName, link });
 }
