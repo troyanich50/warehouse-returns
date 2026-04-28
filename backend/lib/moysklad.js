@@ -1,7 +1,8 @@
-// Поиск возврата покупателя по номеру и обновление доп. поля "Видео"
+// Поиск возврата покупателя по номеру и обновление доп. поля Видео
+
 const API = 'https://api.moysklad.ru/api/remap/1.2';
 
-const POSSIBLE_ENTITIES = ['salesreturn', 'customerreturn', 'purchasereturn', 'demand', 'customerorder'];
+const POSSIBLE_ENTITIES = ['salesreturn', 'customerreturn', 'purchasereturn'];
 
 function authHeaders(token) {
   return {
@@ -12,7 +13,7 @@ function authHeaders(token) {
   };
 }
 
-let entityName = null;
+let cachedEntity = null;
 
 function normalizeAttributes(input) {
   if (Array.isArray(input)) return input;
@@ -20,94 +21,69 @@ function normalizeAttributes(input) {
   return [];
 }
 
-// Перебираем сущности и ищем ту, в метаданных которой есть нужное поле
-async function detectEntityWithField(token, fieldName) {
-  if (entityName) return entityName;
+async function findReturnByNumber(token, returnNumber) {
+  if (cachedEntity) {
+    const url = `${API}/entity/${cachedEntity}?filter=name=${encodeURIComponent(returnNumber)}&limit=1`;
+    const r = await fetch(url, { headers: authHeaders(token) });
+    if (r.ok) {
+      const data = await r.json();
+      if (data.rows && data.rows.length > 0) return { entity: cachedEntity, doc: data.rows[0] };
+    }
+    cachedEntity = null;
+  }
 
   const report = [];
   for (const name of POSSIBLE_ENTITIES) {
     try {
-      const r = await fetch(`${API}/entity/${name}/metadata`, { headers: authHeaders(token) });
+      const url = `${API}/entity/${name}?filter=name=${encodeURIComponent(returnNumber)}&limit=1`;
+      const r = await fetch(url, { headers: authHeaders(token) });
       if (!r.ok) {
-        report.push(`  ${name}: HTTP ${r.status}`);
+        report.push(`${name}: HTTP ${r.status}`);
         continue;
       }
       const data = await r.json();
-      const attrs = normalizeAttributes(data.attributes);
-      const fieldNames = attrs.map(a => a.name);
-      report.push(`  ${name}: ${attrs.length} полей [${fieldNames.join(', ')}]`);
-
-      if (attrs.find(a => a.name === fieldName)) {
-        entityName = name;
-        console.log(`  МойСклад: поле "${fieldName}" найдено в сущности "${name}"`);
-        return name;
+      const rows = data.rows || [];
+      report.push(`${name}: найдено ${rows.length}`);
+      if (rows.length > 0) {
+        cachedEntity = name;
+        console.log(`  МойСклад: документ найден в сущности "${name}"`);
+        return { entity: name, doc: rows[0] };
       }
     } catch (e) {
-      report.push(`  ${name}: ошибка ${e.message}`);
+      report.push(`${name}: ошибка ${e.message}`);
     }
   }
 
-  throw new Error(
-    `МойСклад: поле "${fieldName}" не найдено ни в одной сущности.\n` +
-    `Просмотрено:\n${report.join('\n')}`
-  );
+  throw new Error(`МойСклад: возврат "${returnNumber}" не найден. ${report.join(' | ')}`);
 }
 
-async function findReturnByNumber(token, returnNumber) {
-  const name = entityName;
-  if (!name) throw new Error('Сущность ещё не определена');
-  const url = `${API}/entity/${name}?filter=name=${encodeURIComponent(returnNumber)}&limit=1`;
-  const r = await fetch(url, { headers: authHeaders(token) });
-  if (!r.ok) {
-    const text = await r.text();
-    throw new Error(`МойСклад: поиск не удался: ${r.status} ${text}`);
-  }
-  const data = await r.json();
-  const rows = data.rows || [];
-  if (rows.length === 0) {
-    throw new Error(`МойСклад: документ "${returnNumber}" не найден в сущности "${name}"`);
-  }
-  return rows[0];
-}
+async function updateDocVideoField({ token, entity, doc, fieldName, link }) {
+  const existing = normalizeAttributes(doc.attributes);
 
-async function getAttributeMeta(token, fieldName) {
-  const r = await fetch(`${API}/entity/${entityName}/metadata`, { headers: authHeaders(token) });
-  if (!r.ok) {
-    const text = await r.text();
-    throw new Error(`МойСклад: метаданные не получены: ${r.status} ${text}`);
-  }
-  const data = await r.json();
-  const attrs = normalizeAttributes(data.attributes);
-  const found = attrs.find(a => a.name === fieldName);
-  if (!found) {
-    throw new Error(`МойСклад: поле "${fieldName}" пропало из метаданных сущности "${entityName}"`);
-  }
-  return found;
-}
+  console.log(`  МойСклад: в документе ${existing.length} доп. полей: [${existing.map(a => a.name).join(', ')}]`);
 
-async function updateAttribute(token, returnEntity, attributeMeta, value) {
-  const existing = normalizeAttributes(returnEntity.attributes);
+  const fieldInDoc = existing.find(a => a.name === fieldName);
+  if (!fieldInDoc) {
+    throw new Error(
+      `МойСклад: поле "${fieldName}" не найдено в документе. ` +
+      `Доступные поля в документе: [${existing.map(a => a.name).join(', ') || 'нет ни одного'}]`
+    );
+  }
 
   const attrPayload = {
-    meta: attributeMeta.meta,
-    id: attributeMeta.id,
-    name: attributeMeta.name,
-    value: value,
+    meta: fieldInDoc.meta,
+    id: fieldInDoc.id,
+    name: fieldInDoc.name,
+    value: link,
   };
 
-  const updatedAttrs = [];
-  let replaced = false;
-  for (const a of existing) {
-    if (a.id === attributeMeta.id) {
-      updatedAttrs.push(attrPayload);
-      replaced = true;
-    } else {
-      updatedAttrs.push({ meta: a.meta, id: a.id, name: a.name, value: a.value });
-    }
-  }
-  if (!replaced) updatedAttrs.push(attrPayload);
+  const updatedAttrs = existing.map(a =>
+    a.id === fieldInDoc.id
+      ? attrPayload
+      : { meta: a.meta, id: a.id, name: a.name, value: a.value }
+  );
 
-  const url = `${API}/entity/${entityName}/${returnEntity.id}`;
+  const url = `${API}/entity/${entity}/${doc.id}`;
   const r = await fetch(url, {
     method: 'PUT',
     headers: authHeaders(token),
@@ -121,9 +97,6 @@ async function updateAttribute(token, returnEntity, attributeMeta, value) {
 
 export async function updateReturnVideoField({ token, fieldName, returnNumber, link }) {
   if (!token) throw new Error('Не указан MOYSKLAD_TOKEN');
-
-  await detectEntityWithField(token, fieldName);
-  const attributeMeta = await getAttributeMeta(token, fieldName);
-  const returnEntity = await findReturnByNumber(token, returnNumber);
-  await updateAttribute(token, returnEntity, attributeMeta, link);
+  const { entity, doc } = await findReturnByNumber(token, returnNumber);
+  await updateDocVideoField({ token, entity, doc, fieldName, link });
 }
