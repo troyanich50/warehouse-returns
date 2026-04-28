@@ -58,7 +58,16 @@ async function getReturnMetadata(token) {
 
 async function findVideoAttribute(token, fieldName) {
   const meta = await getReturnMetadata(token);
-  const attrs = meta.attributes || [];
+
+  // attributes может быть массивом, либо объектом { rows: [...] }, либо отсутствовать
+  let attrs = meta.attributes;
+  if (attrs && !Array.isArray(attrs) && Array.isArray(attrs.rows)) {
+    attrs = attrs.rows;
+  }
+  if (!Array.isArray(attrs)) attrs = [];
+
+  console.log(`  МойСклад: найдено ${attrs.length} доп. полей в метаданных`);
+
   const found = attrs.find(a => a.name === fieldName);
   if (!found) {
     const available = attrs.map(a => `"${a.name}"`).join(', ') || '(нет)';
@@ -84,7 +93,12 @@ async function findReturnByNumber(token, returnNumber) {
 }
 
 async function updateAttribute(token, returnEntity, attributeMeta, value) {
-  const existing = returnEntity.attributes || [];
+  // attributes может быть массивом или объектом { rows: [...] }
+  let existing = returnEntity.attributes;
+  if (existing && !Array.isArray(existing) && Array.isArray(existing.rows)) {
+    existing = existing.rows;
+  }
+  if (!Array.isArray(existing)) existing = [];
 
   const attrPayload = {
     meta: attributeMeta.meta,
