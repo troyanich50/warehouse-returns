@@ -1,14 +1,10 @@
-// Минимальный Service Worker для установки PWA на главный экран
-// Не кэширует ничего (приложение всегда требует свежие токены)
-
-self.addEventListener('install', (event) => {
-    self.skipWaiting();
+// Минимальный Service Worker — без агрессивного кеширования
+self.addEventListener('install', () => self.skipWaiting());
+self.addEventListener('activate', (e) => {
+  e.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.map(k => caches.delete(k)));
+    await self.clients.claim();
+  })());
 });
-
-self.addEventListener('activate', (event) => {
-    event.waitUntil(self.clients.claim());
-});
-
-self.addEventListener('fetch', (event) => {
-    // Просто пропускаем запросы без кэширования
-});
+self.addEventListener('fetch', () => {});
