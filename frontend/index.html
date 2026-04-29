@@ -78,7 +78,6 @@
             font-size: 18px; font-weight: 500; word-break: break-all;
         }
 
-        /* === Баннер несинхронизированных === */
         .pending-banner {
             background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(251, 191, 36, 0.05));
             border: 1px solid rgba(251, 191, 36, 0.4);
@@ -103,7 +102,6 @@
         }
         .pending-list-time { font-size: 11px; color: var(--text-mute); font-family: 'JetBrains Mono', monospace; }
 
-        /* === Сканер === */
         #scanner-container {
             position: relative; background: #000;
             border-radius: 16px; overflow: hidden;
@@ -124,7 +122,6 @@
             white-space: nowrap; z-index: 10;
         }
 
-        /* === Запись === */
         #video-container {
             position: relative; background: #000;
             border-radius: 16px; overflow: hidden;
@@ -153,7 +150,6 @@
         }
         .save-badge.visible { opacity: 1; }
 
-        /* === Кнопки === */
         .btn {
             width: 100%; padding: 18px 24px;
             border: none; border-radius: 14px;
@@ -170,7 +166,6 @@
         .btn-warning { background: var(--warning); color: #000; }
         .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-        /* === Прогресс === */
         .progress-wrap { margin-top: 20px; }
         .progress-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-bottom: 8px; }
         .progress-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #ff8c5a); border-radius: 3px; transition: width 0.3s ease; width: 0%; }
@@ -187,7 +182,6 @@
         }
         .status-icon { flex-shrink: 0; width: 18px; height: 18px; margin-top: 1px; }
 
-        /* === Иконки больших экранов === */
         .done-screen { text-align: center; padding: 40px 20px; }
         .done-icon { width: 80px; height: 80px; border-radius: 50%; background: var(--success); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
         .warn-icon { width: 80px; height: 80px; border-radius: 50%; background: var(--warning); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
@@ -204,7 +198,6 @@
         }
         .editable-code:focus { outline: none; border-color: var(--accent); }
 
-        /* === История === */
         .history { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border); }
         .history-title { font-size: 11px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-mute); margin-bottom: 12px; }
         .history-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
@@ -214,7 +207,6 @@
         .history-code { font-family: 'JetBrains Mono', monospace; flex: 1; color: var(--text); }
         .history-time { font-family: 'JetBrains Mono', monospace; color: var(--text-mute); font-size: 11px; }
 
-        /* === Настройки === */
         .settings-toggle { background: none; border: none; color: var(--text-mute); font-size: 12px; cursor: pointer; padding: 8px; }
         .settings-panel { position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(8px); z-index: 100; display: none; align-items: flex-end; justify-content: center; }
         .settings-panel.open { display: flex; }
@@ -250,10 +242,8 @@
                 <div class="step" id="step-3"></div>
             </div>
 
-            <!-- БАННЕР НЕСИНХРОНИЗИРОВАННЫХ -->
             <div id="pending-banner" class="hidden"></div>
 
-            <!-- ЭТАП: СКАН -->
             <div id="stage-scan">
                 <div class="stage-label">Шаг 1 из 3</div>
                 <div class="stage-title">Сканирование штрихкода</div>
@@ -267,7 +257,6 @@
                 </div>
             </div>
 
-            <!-- ЭТАП: ПРОВЕРКА В МОЙСКЛАД -->
             <div id="stage-check" class="hidden">
                 <div class="stage-label">Шаг 1 из 3</div>
                 <div class="stage-title">Проверка в МойСклад</div>
@@ -279,7 +268,6 @@
                 </div>
             </div>
 
-            <!-- ЭТАП: НЕ НАЙДЕН -->
             <div id="stage-notfound" class="hidden">
                 <div class="warn-icon">
                     <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
@@ -301,7 +289,6 @@
                 <button class="btn btn-secondary" onclick="cancelAndScan()">← Назад к сканированию</button>
             </div>
 
-            <!-- ЭТАП: ВИДЕО УЖЕ ЕСТЬ -->
             <div id="stage-already" class="hidden">
                 <div class="err-icon">
                     <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
@@ -318,7 +305,6 @@
                 <button class="btn btn-primary" onclick="cancelAndScan()">На главную</button>
             </div>
 
-            <!-- ЭТАП: ЗАПИСЬ -->
             <div id="stage-record" class="hidden">
                 <div class="stage-label">Шаг 2 из 3</div>
                 <div class="stage-title">Запись распаковки</div>
@@ -340,7 +326,6 @@
                 </div>
             </div>
 
-            <!-- ЭТАП: ЗАГРУЗКА -->
             <div id="stage-upload" class="hidden">
                 <div class="stage-label">Шаг 3 из 3</div>
                 <div class="stage-title">Загрузка и сохранение</div>
@@ -363,7 +348,6 @@
                 <div id="upload-msgs" style="margin-top: 20px;"></div>
             </div>
 
-            <!-- ЭТАП: ГОТОВО -->
             <div id="stage-done" class="hidden">
                 <div class="done-screen">
                     <div class="done-icon">
@@ -402,7 +386,7 @@
     </div>
 
     <script>// ============================================================
-        // INDEXEDDB: надёжное хранилище видео между сессиями
+        // INDEXEDDB
         // ============================================================
         const DB_NAME = 'warehouse-returns';
         const DB_VERSION = 1;
@@ -508,7 +492,11 @@
         // СКАНИРОВАНИЕ
         // ============================================================
         function startScanner() {
-            if (state.scanner) state.scanner.clear().catch(() => {});
+            if (state.scanner) {
+                // Если уже есть инстанс — сначала останавливаем и потом запускаем заново
+                stopScanner().then(() => startScanner());
+                return;
+            }
             state.scanner = new Html5Qrcode("qr-reader");
             const config = {
                 fps: 10,
@@ -537,7 +525,11 @@
                 config,
                 onScanSuccess,
                 () => {}
-            ).catch(err => alert('Не удалось включить камеру: ' + err));
+            ).catch(err => {
+                console.error('Scanner start error:', err);
+                state.scanner = null;
+                alert('Не удалось включить камеру: ' + err);
+            });
         }
 
         function onScanSuccess(decodedText) {
@@ -545,23 +537,37 @@
             if (!code || code.length < 3) return;
             if (navigator.vibrate) navigator.vibrate(100);
             state.barcode = code;
-            stopScanner();
-            checkBarcodeOnServer();
+            stopScanner().then(() => checkBarcodeOnServer());
         }
 
-        function stopScanner() {
-            if (state.scanner) {
-                state.scanner.stop().then(() => state.scanner.clear()).catch(() => {});
-            }
+        async function stopScanner() {
+            if (!state.scanner) return;
+            const sc = state.scanner;
+            state.scanner = null;
+            try {
+                if (sc.isScanning) {
+                    await sc.stop();
+                }
+            } catch (e) { /* ignore */ }
+            try {
+                await sc.clear();
+            } catch (e) { /* ignore */ }
+            // Дополнительная зачистка DOM, который html5-qrcode мог оставить
+            const reader = document.getElementById('qr-reader');
+            if (reader) reader.innerHTML = '';
         }
 
-        function restartScanner() { stopScanner(); setTimeout(startScanner, 300); }
+        async function restartScanner() {
+            await stopScanner();
+            await new Promise(r => setTimeout(r, 200));
+            startScanner();
+        }
 
-        function manualInput() {
+        async function manualInput() {
             const code = prompt('Введите номер возврата вручную:');
             if (code && code.trim()) {
                 state.barcode = code.trim();
-                stopScanner();
+                await stopScanner();
                 checkBarcodeOnServer();
             }
         }
@@ -696,7 +702,6 @@
             state.recorder.ondataavailable = async (e) => {
                 if (e.data && e.data.size > 0) {
                     state.chunks.push(e.data);
-                    // Промежуточное сохранение каждые ~3 секунды
                     if (state.chunks.length % 3 === 0) {
                         await saveChunksToDB(false);
                     }
@@ -706,7 +711,6 @@
                 const ext = state.recorder.mimeType.includes('mp4') ? 'mp4' : 'webm';
                 state.videoBlob = new Blob(state.chunks, { type: state.recorder.mimeType });
                 state.videoBlob.fileExtension = ext;
-                // Финальное сохранение перед загрузкой
                 await saveChunksToDB(true);
                 uploadVideo();
             };
@@ -735,7 +739,6 @@
                     savedAt: Date.now(),
                     finalized: isFinal,
                 });
-                // Лёгкая визуальная отметка о сохранении
                 const badge = document.getElementById('save-badge');
                 badge.classList.add('visible');
                 setTimeout(() => badge.classList.remove('visible'), 1500);
@@ -756,22 +759,30 @@
                 state.recorder.stop();
                 state.recording = false;
                 clearInterval(state.recTimer);
-                if (state.stream) state.stream.getTracks().forEach(t => t.stop());
+                if (state.stream) {
+                    state.stream.getTracks().forEach(t => t.stop());
+                    state.stream = null;
+                }
                 if (navigator.vibrate) navigator.vibrate([50, 50, 50]);
             }
         }
 
-        function cancelAndScan() {
-            if (state.stream) state.stream.getTracks().forEach(t => t.stop());
+        async function cancelAndScan() {
+            if (state.stream) {
+                state.stream.getTracks().forEach(t => t.stop());
+                state.stream = null;
+            }
+            await stopScanner();
             state.barcode = null;
             state.videoBlob = null;
             showStage('scan');
+            await new Promise(r => setTimeout(r, 200));
             startScanner();
             renderPendingBanner();
         }
 
         // ============================================================
-        // ЗАГРУЗКА (новая или повторная из IndexedDB)
+        // ЗАГРУЗКА
         // ============================================================
         async function uploadVideo() {
             showStage('upload');
@@ -796,7 +807,6 @@
                 updateProgress(0, 'Подключение к серверу...');
                 await uploadWithProgress(formData);
                 updateProgress(100, 'Готово');
-                // Удаляем из IndexedDB после успеха
                 await dbDelete(state.barcode);
                 addToHistory(state.barcode, true);
                 showDone();
@@ -865,7 +875,8 @@
             document.getElementById('done-barcode').textContent = state.barcode;
         }
 
-        function resetAndScan() {
+        async function resetAndScan() {
+            await stopScanner();
             state.barcode = null;
             state.videoBlob = null;
             state.chunks = [];
@@ -876,6 +887,7 @@
             btn.innerHTML = '🎥 Начать запись';
             document.getElementById('rec-ind').classList.add('hidden');
             showStage('scan');
+            await new Promise(r => setTimeout(r, 200));
             startScanner();
             renderPendingBanner();
         }
@@ -892,7 +904,6 @@
                     banner.innerHTML = '';
                     return;
                 }
-                const single = items.length === 1;
                 banner.classList.remove('hidden');
                 banner.className = 'pending-banner';
                 banner.innerHTML = `
@@ -909,19 +920,21 @@
                         <polyline points="9 18 15 12 9 6"></polyline>
                     </svg>
                 `;
-                banner.onclick = () => showPendingDialog(items);
+                banner.onclick = async () => {
+                    if (items.length === 1) {
+                        await stopScanner();
+                        retryPending(items[0]);
+                        return;
+                    }
+                    await stopScanner();
+                    showPendingDialog(items);
+                };
             } catch (e) {
                 console.warn('renderPendingBanner:', e);
             }
         }
 
         async function showPendingDialog(items) {
-            // Простой выбор: если одна — сразу повторить, если несколько — показать список
-            if (items.length === 1) {
-                retryPending(items[0]);
-                return;
-            }
-            // Отрисовка простого модального окна на месте main
             const main = document.querySelector('.main');
             const html = `
                 <div class="stage-label">Несинхронизированные</div>
@@ -946,26 +959,18 @@
                     if (rec) {
                         main.innerHTML = main.dataset.savedHtml;
                         delete main.dataset.savedHtml;
-                        bindPostRestoreHandlers();
                         retryPending(rec);
                     }
                 };
             });
-            document.getElementById('pending-back').onclick = () => {
+            document.getElementById('pending-back').onclick = async () => {
                 main.innerHTML = main.dataset.savedHtml;
                 delete main.dataset.savedHtml;
-                bindPostRestoreHandlers();
+                await new Promise(r => setTimeout(r, 100));
+                showStage('scan');
+                startScanner();
                 renderPendingBanner();
             };
-        }
-
-        function bindPostRestoreHandlers() {
-            // После восстановления HTML главной — повторно навешиваем обработчики
-            // (они onclick="..." в разметке, поэтому ничего не нужно)
-            // Если пользователь был на сканировании — перезапустить
-            if (!document.getElementById('stage-scan').classList.contains('hidden')) {
-                startScanner();
-            }
         }
 
         function retryPending(record) {
