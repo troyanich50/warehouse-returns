@@ -1056,13 +1056,27 @@
         // ============================================================
         // ИНИЦИАЛИЗАЦИЯ
         // ============================================================
-        window.addEventListener('load', async () => {
+        async function bootstrap() {
             updateNetStatus();
             renderHistory();
             await renderPendingBanner();
-            if (!state.backendUrl) toggleSettings();
-            else { showStage('scan'); startScanner(); }
-        });
+            if (!state.backendUrl) {
+                toggleSettings();
+                return;
+            }
+            showStage('scan');
+            // Даём DOM и видео-элементу время полностью отрендериться,
+            // прежде чем html5-qrcode попытается захватить камеру.
+            // На iOS Safari при первой загрузке без этой паузы камера часто не стартует.
+            await new Promise(r => setTimeout(r, 500));
+            startScanner();
+        }
+
+        if (document.readyState === 'complete') {
+            bootstrap();
+        } else {
+            window.addEventListener('load', bootstrap);
+        }
 
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js').catch(() => {});
