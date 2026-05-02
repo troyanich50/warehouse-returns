@@ -21,7 +21,6 @@ async function ensureFolder(token, folder) {
   }
 }
 
-// Проверка: существует ли уже файл по этому пути на Диске
 async function resourceExists(token, remotePath) {
   const url = `${API}/resources?path=${encodeURIComponent(remotePath)}&fields=path`;
   const r = await fetch(url, { headers: authHeaders(token) });
@@ -31,10 +30,14 @@ async function resourceExists(token, remotePath) {
   throw new Error(`Не удалось проверить существование файла: ${r.status} ${text}`);
 }
 
-// Подобрать уникальное имя: name.ext, name_new.ext, name_new_2.ext, ...
-async function resolveUniqueName(token, folderPath, baseName) {
-  const ext = path.extname(baseName); // ".mp4"
-  const stem = baseName.slice(0, baseName.length - ext.length); // "ii123"
+/**
+ * Подобрать уникальное имя файла, перебирая суффиксы.
+ * @param {string} suffixStrategy — 'new' (для возвратов: name_new, name_new_2)
+ *                                  или 'numeric' (для отгрузок: name_1, name_2)
+ */
+async function resolveUniqueName(token, folderPath, baseName, suffixStrategy = 'new') {
+  const ext = path.extname(baseName);
+  const stem = baseName.slice(0, baseName.length - ext.length);
 
   // 1. Пробуем оригинальное имя
   let candidate = baseName;
@@ -43,26 +46,35 @@ async function resolveUniqueName(token, folderPath, baseName) {
     return candidate;
   }
 
-  // 2. Пробуем "_new"
-  candidate = `${stem}_new${ext}`;
-  candidatePath = `${folderPath}/${candidate}`;
-  if (!(await resourceExists(token, candidatePath))) {
-    return candidate;
-  }
-
-  // 3. Пробуем "_new_2", "_new_3", ... (защита от бесконечного цикла — лимит 50)
-  for (let i = 2; i <= 50; i++) {
-    candidate = `${stem}_new_${i}${ext}`;
+  if (suffixStrategy === 'numeric') {
+    // Стратегия для отгрузок: name_1, name_2, ...
+    for (let i = 1; i <= 100; i++) {
+      candidate = `${stem}_${i}${ext}`;
+      candidatePath = `${folderPath}/${candidate}`;
+      if (!(await resourceExists(token, candidatePath))) {
+        return candidate;
+      }
+    }
+  } else {
+    // Стратегия по умолчанию для возвратов: name_new, name_new_2, ...
+    candidate = `${stem}_new${ext}`;
     candidatePath = `${folderPath}/${candidate}`;
     if (!(await resourceExists(token, candidatePath))) {
       return candidate;
     }
+    for (let i = 2; i <= 50; i++) {
+      candidate = `${stem}_new_${i}${ext}`;
+      candidatePath = `${folderPath}/${candidate}`;
+      if (!(await resourceExists(token, candidatePath))) {
+        return candidate;
+      }
+    }
   }
-  throw new Error(`Не удалось подобрать уникальное имя для "${baseName}" (более 50 копий уже есть)`);
+
+  throw new Error(`Не удалось подобрать уникальное имя для "${baseName}"`);
 }
 
 async function getUploadUrl(token, remotePath) {
-  // overwrite=false на всякий случай — мы уже подобрали уникальное имя
   const url = `${API}/resources/upload?path=${encodeURIComponent(remotePath)}&overwrite=false`;
   const r = await fetch(url, { headers: authHeaders(token) });
   if (!r.ok) {
@@ -107,7 +119,7 @@ async function getResourceMeta(token, remotePath) {
   return r.json();
 }
 
-export async function uploadToYandexDisk({ token, folder, remoteName, localPath }) {
+export async function uploadToYandexDisk({ token, folder, remoteName, localPath, suffixStrategy }) {
   if (!token) throw new Error('Не указан YANDEX_DISK_TOKEN');
 
   const cleanFolder = String(folder || '').replace(/^\/+|\/+$/g, '');
@@ -115,9 +127,8 @@ export async function uploadToYandexDisk({ token, folder, remoteName, localPath 
 
   if (cleanFolder) await ensureFolder(token, folderPath);
 
-  // Подбираем уникальное имя файла
   const finalName = cleanFolder
-    ? await resolveUniqueName(token, folderPath, remoteName)
+    ? await resolveUniqueName(token, folderPath, remoteName, suffixStrategy)
     : remoteName;
 
   if (finalName !== remoteName) {
