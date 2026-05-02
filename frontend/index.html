@@ -893,7 +893,7 @@
 
             try {
                 state.stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } },
+                    video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } },
                     audio: true
                 });
                 document.getElementById('video-preview').srcObject = state.stream;
@@ -915,7 +915,7 @@
             if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm;codecs=vp9,opus';
             if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
             try {
-                state.recorder = new MediaRecorder(state.stream, { mimeType, videoBitsPerSecond: 2500000 });
+                state.recorder = new MediaRecorder(state.stream, { mimeType, videoBitsPerSecond: 4000000 });
             } catch (e) {
                 state.recorder = new MediaRecorder(state.stream);
             }
