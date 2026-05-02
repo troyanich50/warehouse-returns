@@ -9,7 +9,7 @@
     <meta name="apple-mobile-web-app-title" content="Склад">
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
-    <title>Кладовщик · Возвраты</title>
+    <title>Кладовщик</title>
     <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Manrope:wght@400;500;600;700;800&display=swap');
@@ -77,6 +77,22 @@
             font-family: 'JetBrains Mono', monospace;
             font-size: 18px; font-weight: 500; word-break: break-all;
         }
+
+        /* Переключатель режима в шапке */
+        .mode-pill {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 6px 12px;
+            border-radius: 100px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            cursor: pointer;
+        }
+        .mode-pill.return { border-color: rgba(255,107,53,0.4); color: var(--accent); }
+        .mode-pill.shipment { border-color: rgba(74,222,128,0.4); color: var(--success); }
 
         .pending-banner {
             background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(251, 191, 36, 0.05));
@@ -164,6 +180,7 @@
         .btn-danger { background: var(--error); color: #fff; }
         .btn-secondary { background: var(--bg-card); color: var(--text); border: 1px solid var(--border); }
         .btn-warning { background: var(--warning); color: #000; }
+        .btn-success { background: var(--success); color: #000; box-shadow: 0 0 30px rgba(74,222,128,0.2); }
         .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
         .progress-wrap { margin-top: 20px; }
@@ -217,6 +234,46 @@
         .form-label { display: block; font-size: 12px; font-weight: 600; color: var(--text-dim); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
         .form-input { width: 100%; padding: 14px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 14px; }
         .form-input:focus { outline: none; border-color: var(--accent); }
+
+        /* Радио-переключатель режимов */
+        .mode-radio-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        .mode-radio {
+            position: relative;
+            cursor: pointer;
+        }
+        .mode-radio input { position: absolute; opacity: 0; pointer-events: none; }
+        .mode-radio-card {
+            background: var(--bg);
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 12px;
+            text-align: center;
+            transition: all 0.15s ease;
+        }
+        .mode-radio input:checked + .mode-radio-card {
+            border-color: var(--accent);
+            background: rgba(255,107,53,0.06);
+        }
+        .mode-radio-emoji { font-size: 22px; margin-bottom: 4px; line-height: 1; }
+        .mode-radio-name { font-size: 13px; font-weight: 700; }
+        .mode-radio-disabled .mode-radio-card {
+            opacity: 0.4;
+        }
+        .mode-radio-disabled .mode-radio-card::after {
+            content: 'скоро';
+            display: block;
+            font-size: 9px;
+            margin-top: 4px;
+            color: var(--text-mute);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+
         .manual-input-wrap { margin-top: 12px; text-align: center; }
         .manual-link { background: none; border: none; color: var(--text-dim); font-size: 13px; text-decoration: underline; cursor: pointer; }
         .hidden { display: none !important; }
@@ -224,92 +281,128 @@
         @keyframes spin { to { transform: rotate(360deg); } }
         .check-loading { text-align: center; padding: 40px 20px; }
         .check-spinner { width: 60px; height: 60px; border: 4px solid var(--border); border-top-color: var(--accent); border-radius: 50%; margin: 0 auto 24px; animation: spin 0.8s linear infinite; }
+
+        /* Главный экран отгрузки */
+        .shipment-hero {
+            text-align: center;
+            padding: 20px 10px 40px;
+        }
+        .shipment-hero-emoji { font-size: 64px; margin-bottom: 16px; }
+        .shipment-hero-date {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: var(--text-dim);
+            margin-bottom: 8px;
+        }
+        .shipment-hero-title {
+            font-size: 26px;
+            font-weight: 800;
+            margin-bottom: 32px;
+            letter-spacing: -0.02em;
+        }
     </style>
 </head>
 <body>
     <div class="app">
         <div class="header">
-            <div class="header-title">СКЛАД <span>·</span> ВОЗВРАТЫ</div>
+            <div class="header-title">СКЛАД <span>·</span> <span id="header-mode">ВОЗВРАТЫ</span></div>
             <div style="display: flex; align-items: center; gap: 12px;">
                 <div class="status-dot" id="net-status"></div>
                 <button class="settings-toggle" onclick="toggleSettings()">⚙</button>
             </div>
         </div>
         <div class="main">
-            <div class="steps">
-                <div class="step" id="step-1"></div>
-                <div class="step" id="step-2"></div>
-                <div class="step" id="step-3"></div>
-            </div>
 
             <div id="pending-banner" class="hidden"></div>
 
-            <div id="stage-scan">
-                <div class="stage-label">Шаг 1 из 3</div>
-                <div class="stage-title">Сканирование штрихкода</div>
-                <div id="scanner-container">
-                    <div id="qr-reader"></div>
-                    <div class="scanner-hint">Наведите камеру на штрихкод</div>
+            <!-- ====== РЕЖИМ ВОЗВРАТЫ ====== -->
+            <div id="mode-return">
+                <div class="steps">
+                    <div class="step" id="step-1"></div>
+                    <div class="step" id="step-2"></div>
+                    <div class="step" id="step-3"></div>
                 </div>
-                <button class="btn btn-secondary" onclick="restartScanner()">Перезапустить камеру</button>
-                <div class="manual-input-wrap">
-                    <button class="manual-link" onclick="manualInput()">Ввести номер вручную</button>
+
+                <div id="stage-scan">
+                    <div class="stage-label">Шаг 1 из 3</div>
+                    <div class="stage-title">Сканирование штрихкода</div>
+                    <div id="scanner-container">
+                        <div id="qr-reader"></div>
+                        <div class="scanner-hint">Наведите камеру на штрихкод</div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="restartScanner()">Перезапустить камеру</button>
+                    <div class="manual-input-wrap">
+                        <button class="manual-link" onclick="manualInput()">Ввести номер вручную</button>
+                    </div>
+                </div>
+
+                <div id="stage-check" class="hidden">
+                    <div class="stage-label">Шаг 1 из 3</div>
+                    <div class="stage-title">Проверка в МойСклад</div>
+                    <div class="check-loading">
+                        <div class="check-spinner"></div>
+                        <div style="color: var(--text-dim); font-size: 14px;">
+                            Ищем возврат <span class="mono" id="check-barcode" style="color: var(--text);">—</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="stage-notfound" class="hidden">
+                    <div class="warn-icon">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="done-title" style="text-align:center;">Возврат не найден</div>
+                    <div class="done-subtitle" style="text-align:center;">Проверьте правильность штрихкода. Если он верен — создадим новый возврат.</div>
+                    <div class="card">
+                        <div class="card-label">Отсканированный номер</div>
+                        <input type="text" class="editable-code" id="notfound-input" />
+                    </div>
+                    <button class="btn btn-primary" id="btn-create" onclick="createReturnAndProceed()">
+                        ✓ Всё верно — создать возврат
+                    </button>
+                    <div style="height: 10px;"></div>
+                    <button class="btn btn-secondary" onclick="cancelAndScan()">← Назад к сканированию</button>
+                </div>
+
+                <div id="stage-already" class="hidden">
+                    <div class="err-icon">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="18" y1="6" x2="6" y2="18"></line>
+                            <line x1="6" y1="6" x2="18" y2="18"></line>
+                        </svg>
+                    </div>
+                    <div class="done-title" style="text-align:center;">Видео уже записано</div>
+                    <div class="done-subtitle" style="text-align:center;">Для этого возврата видео уже было загружено ранее. Повторная запись невозможна.</div>
+                    <div class="card">
+                        <div class="card-label">Номер возврата</div>
+                        <div class="card-value" id="already-barcode">—</div>
+                    </div>
+                    <button class="btn btn-primary" onclick="cancelAndScan()">На главную</button>
                 </div>
             </div>
 
-            <div id="stage-check" class="hidden">
-                <div class="stage-label">Шаг 1 из 3</div>
-                <div class="stage-title">Проверка в МойСклад</div>
-                <div class="check-loading">
-                    <div class="check-spinner"></div>
-                    <div style="color: var(--text-dim); font-size: 14px;">
-                        Ищем возврат <span class="mono" id="check-barcode" style="color: var(--text);">—</span>
+            <!-- ====== РЕЖИМ ОТГРУЗКА ====== -->
+            <div id="mode-shipment" class="hidden">
+                <div id="stage-shipment-home">
+                    <div class="shipment-hero">
+                        <div class="shipment-hero-emoji">📦</div>
+                        <div class="shipment-hero-date" id="shipment-date">—</div>
+                        <div class="shipment-hero-title">Запись отгрузки</div>
+                        <button class="btn btn-success" onclick="startShipmentRecording()">🎥 Начать запись</button>
                     </div>
                 </div>
             </div>
 
-            <div id="stage-notfound" class="hidden">
-                <div class="warn-icon">
-                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="12" y1="9" x2="12" y2="13"></line>
-                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                    </svg>
-                </div>
-                <div class="done-title" style="text-align:center;">Возврат не найден</div>
-                <div class="done-subtitle" style="text-align:center;">Проверьте правильность штрихкода. Если он верен — создадим новый возврат.</div>
-                <div class="card">
-                    <div class="card-label">Отсканированный номер</div>
-                    <input type="text" class="editable-code" id="notfound-input" />
-                </div>
-                <button class="btn btn-primary" id="btn-create" onclick="createReturnAndProceed()">
-                    ✓ Всё верно — создать возврат
-                </button>
-                <div style="height: 10px;"></div>
-                <button class="btn btn-secondary" onclick="cancelAndScan()">← Назад к сканированию</button>
-            </div>
-
-            <div id="stage-already" class="hidden">
-                <div class="err-icon">
-                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
-                    </svg>
-                </div>
-                <div class="done-title" style="text-align:center;">Видео уже записано</div>
-                <div class="done-subtitle" style="text-align:center;">Для этого возврата видео уже было загружено ранее. Повторная запись невозможна.</div>
-                <div class="card">
-                    <div class="card-label">Номер возврата</div>
-                    <div class="card-value" id="already-barcode">—</div>
-                </div>
-                <button class="btn btn-primary" onclick="cancelAndScan()">На главную</button>
-            </div>
-
+            <!-- ====== ОБЩИЕ ЭТАПЫ: ЗАПИСЬ / ЗАГРУЗКА / ГОТОВО ====== -->
             <div id="stage-record" class="hidden">
-                <div class="stage-label">Шаг 2 из 3</div>
-                <div class="stage-title">Запись распаковки</div>
-                <div class="card">
-                    <div class="card-label">Номер возврата</div>
+                <div class="stage-label" id="record-step-label">Шаг 2 из 3</div>
+                <div class="stage-title" id="record-title">Запись распаковки</div>
+                <div class="card" id="record-info-card">
+                    <div class="card-label" id="record-info-label">Номер возврата</div>
                     <div class="card-value" id="display-barcode">—</div>
                 </div>
                 <div id="video-container">
@@ -322,15 +415,15 @@
                 </div>
                 <button class="btn btn-primary" id="btn-record" onclick="toggleRecording()">🎥 Начать запись</button>
                 <div style="margin-top: 12px;">
-                    <button class="btn btn-secondary" onclick="cancelAndScan()">← Назад к сканированию</button>
+                    <button class="btn btn-secondary" onclick="cancelAndGoHome()">← Назад</button>
                 </div>
             </div>
 
             <div id="stage-upload" class="hidden">
-                <div class="stage-label">Шаг 3 из 3</div>
+                <div class="stage-label" id="upload-step-label">Шаг 3 из 3</div>
                 <div class="stage-title">Загрузка и сохранение</div>
-                <div class="card">
-                    <div class="card-label">Номер возврата</div>
+                <div class="card" id="upload-info-card">
+                    <div class="card-label" id="upload-info-label">Номер возврата</div>
                     <div class="card-value" id="upload-barcode">—</div>
                 </div>
                 <div class="card">
@@ -355,14 +448,14 @@
                             <polyline points="20 6 9 17 4 12"></polyline>
                         </svg>
                     </div>
-                    <div class="done-title">Возврат обработан</div>
+                    <div class="done-title" id="done-title">Возврат обработан</div>
                     <div class="done-subtitle" id="done-barcode">—</div>
-                    <button class="btn btn-primary" onclick="resetAndScan()">Следующий возврат →</button>
+                    <button class="btn btn-primary" id="done-next-btn" onclick="resetAndGoHome()">Следующий →</button>
                 </div>
             </div>
 
             <div class="history" id="history-section">
-                <div class="history-title">Сегодня обработано</div>
+                <div class="history-title" id="history-section-title">Сегодня обработано</div>
                 <div id="history-list"></div>
             </div>
         </div>
@@ -370,6 +463,41 @@
         <div class="settings-panel" id="settings">
             <div class="settings-content">
                 <div class="settings-title">Настройки</div>
+
+                <div class="form-group">
+                    <label class="form-label">Режим работы</label>
+                    <div class="mode-radio-group">
+                        <label class="mode-radio">
+                            <input type="radio" name="mode" value="return">
+                            <div class="mode-radio-card">
+                                <div class="mode-radio-emoji">↩️</div>
+                                <div class="mode-radio-name">Возврат</div>
+                            </div>
+                        </label>
+                        <label class="mode-radio">
+                            <input type="radio" name="mode" value="shipment">
+                            <div class="mode-radio-card">
+                                <div class="mode-radio-emoji">📦</div>
+                                <div class="mode-radio-name">Отгрузка</div>
+                            </div>
+                        </label>
+                        <label class="mode-radio mode-radio-disabled">
+                            <input type="radio" name="mode" value="supply" disabled>
+                            <div class="mode-radio-card">
+                                <div class="mode-radio-emoji">🚚</div>
+                                <div class="mode-radio-name">Поставка</div>
+                            </div>
+                        </label>
+                        <label class="mode-radio mode-radio-disabled">
+                            <input type="radio" name="mode" value="order" disabled>
+                            <div class="mode-radio-card">
+                                <div class="mode-radio-emoji">🛒</div>
+                                <div class="mode-radio-name">Заказ</div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label class="form-label">Адрес сервера (Backend URL)</label>
                     <input type="text" class="form-input" id="backend-url" placeholder="https://your-server.com">
@@ -385,7 +513,8 @@
         </div>
     </div>
 
-    <script>// ============================================================
+    <script>
+        // ============================================================
         // INDEXEDDB
         // ============================================================
         const DB_NAME = 'warehouse-returns';
@@ -401,7 +530,7 @@
                 req.onupgradeneeded = (e) => {
                     const db = e.target.result;
                     if (!db.objectStoreNames.contains(STORE)) {
-                        db.createObjectStore(STORE, { keyPath: 'barcode' });
+                        db.createObjectStore(STORE, { keyPath: 'key' });
                     }
                 };
                 req.onsuccess = () => { dbInstance = req.result; resolve(dbInstance); };
@@ -419,21 +548,21 @@
             });
         }
 
-        async function dbGet(barcode) {
+        async function dbGet(key) {
             const db = await openDB();
             return new Promise((resolve, reject) => {
                 const tx = db.transaction(STORE, 'readonly');
-                const req = tx.objectStore(STORE).get(barcode);
+                const req = tx.objectStore(STORE).get(key);
                 req.onsuccess = () => resolve(req.result);
                 req.onerror = () => reject(req.error);
             });
         }
 
-        async function dbDelete(barcode) {
+        async function dbDelete(key) {
             const db = await openDB();
             return new Promise((resolve, reject) => {
                 const tx = db.transaction(STORE, 'readwrite');
-                tx.objectStore(STORE).delete(barcode);
+                tx.objectStore(STORE).delete(key);
                 tx.oncomplete = () => resolve();
                 tx.onerror = () => reject(tx.error);
             });
@@ -453,7 +582,10 @@
         // СОСТОЯНИЕ
         // ============================================================
         const state = {
-            barcode: null,
+            mode: localStorage.getItem('app_mode') || 'return',
+            // Идентификатор текущей записи: для возврата = barcode; для отгрузки = "Отгрузка_DD_MM_YYYY"
+            recordKey: null,
+            barcode: null, // используется только в режиме возврата
             videoBlob: null,
             stream: null,
             recorder: null,
@@ -462,41 +594,117 @@
             recStartTime: null,
             recTimer: null,
             scanner: null,
+            currentFilename: null,
             backendUrl: localStorage.getItem('backendUrl') || '',
             apiKey: localStorage.getItem('apiKey') || '',
             history: JSON.parse(localStorage.getItem('history') || '[]'),
         };
 
+        function formatShipmentDate() {
+            const d = new Date();
+            const dd = String(d.getDate()).padStart(2, '0');
+            const mm = String(d.getMonth() + 1).padStart(2, '0');
+            const yyyy = d.getFullYear();
+            return `${dd}_${mm}_${yyyy}`;
+        }
+
+        // ============================================================
+        // РЕЖИМ — переключение интерфейса
+        // ============================================================
+        function applyMode(mode) {
+            state.mode = mode;
+            localStorage.setItem('app_mode', mode);
+
+            const isReturn = mode === 'return';
+            const isShipment = mode === 'shipment';
+
+            document.getElementById('mode-return').classList.toggle('hidden', !isReturn);
+            document.getElementById('mode-shipment').classList.toggle('hidden', !isShipment);
+            document.getElementById('header-mode').textContent = isReturn ? 'ВОЗВРАТЫ' : 'ОТГРУЗКА';
+
+            // Лейблы на общих этапах
+            if (isReturn) {
+                document.getElementById('record-step-label').textContent = 'Шаг 2 из 3';
+                document.getElementById('record-title').textContent = 'Запись распаковки';
+                document.getElementById('record-info-label').textContent = 'Номер возврата';
+                document.getElementById('upload-step-label').textContent = 'Шаг 3 из 3';
+                document.getElementById('upload-info-label').textContent = 'Номер возврата';
+                document.getElementById('done-title').textContent = 'Возврат обработан';
+                document.getElementById('history-section-title').textContent = 'Сегодня обработано';
+                document.getElementById('done-next-btn').textContent = 'Следующий возврат →';
+            } else if (isShipment) {
+                document.getElementById('record-step-label').textContent = '';
+                document.getElementById('record-title').textContent = 'Запись отгрузки';
+                document.getElementById('record-info-label').textContent = 'Дата отгрузки';
+                document.getElementById('upload-step-label').textContent = '';
+                document.getElementById('upload-info-label').textContent = 'Отгрузка';
+                document.getElementById('done-title').textContent = 'Отгрузка обработана';
+                document.getElementById('history-section-title').textContent = 'Сегодня записано';
+                document.getElementById('done-next-btn').textContent = 'Записать ещё →';
+                // Дата для главной отгрузки
+                document.getElementById('shipment-date').textContent = formatShipmentDate().replace(/_/g, '.');
+            }
+        }
+
         function showStage(stage) {
-            ['scan','check','notfound','already','record','upload','done'].forEach(s => {
-                document.getElementById('stage-' + s).classList.add('hidden');
+            ['scan','check','notfound','already','shipment-home','record','upload','done'].forEach(s => {
+                const el = document.getElementById('stage-' + s);
+                if (el) el.classList.add('hidden');
             });
-            document.getElementById('stage-' + stage).classList.remove('hidden');
-            const steps = ['step-1', 'step-2', 'step-3'];
-            steps.forEach(s => document.getElementById(s).classList.remove('active','done'));
-            if (['scan','check','notfound','already'].includes(stage)) {
-                document.getElementById('step-1').classList.add('active');
-            } else if (stage === 'record') {
-                document.getElementById('step-1').classList.add('done');
-                document.getElementById('step-2').classList.add('active');
-            } else if (stage === 'upload') {
-                document.getElementById('step-1').classList.add('done');
-                document.getElementById('step-2').classList.add('done');
-                document.getElementById('step-3').classList.add('active');
-            } else if (stage === 'done') {
-                steps.forEach(s => document.getElementById(s).classList.add('done'));
+            const el = document.getElementById('stage-' + stage);
+            if (el) el.classList.remove('hidden');
+
+            // Шаги-индикатор только для режима возврата
+            if (state.mode === 'return') {
+                const steps = ['step-1', 'step-2', 'step-3'];
+                steps.forEach(s => {
+                    const e = document.getElementById(s);
+                    if (e) e.classList.remove('active', 'done');
+                });
+                if (['scan','check','notfound','already'].includes(stage)) {
+                    document.getElementById('step-1').classList.add('active');
+                } else if (stage === 'record') {
+                    document.getElementById('step-1').classList.add('done');
+                    document.getElementById('step-2').classList.add('active');
+                } else if (stage === 'upload') {
+                    document.getElementById('step-1').classList.add('done');
+                    document.getElementById('step-2').classList.add('done');
+                    document.getElementById('step-3').classList.add('active');
+                } else if (stage === 'done') {
+                    steps.forEach(s => document.getElementById(s).classList.add('done'));
+                }
+            }
+        }
+
+        function goHome() {
+            if (state.mode === 'return') {
+                showStage('scan');
+                startScanner();
+            } else {
+                document.getElementById('shipment-date').textContent = formatShipmentDate().replace(/_/g, '.');
+                showStage('shipment-home');
             }
         }
 
         // ============================================================
-        // СКАНИРОВАНИЕ
+        // СКАНИРОВАНИЕ (только режим возврата)
         // ============================================================
         function startScanner() {
+            if (state.mode !== 'return') return;
             if (state.scanner) {
-                // Если уже есть инстанс — сначала останавливаем и потом запускаем заново
                 stopScanner().then(() => startScanner());
                 return;
             }
+            const reader = document.getElementById('qr-reader');
+            if (!reader) return;
+            // Гарантируем, что контейнер виден и имеет размеры
+            const container = document.getElementById('scanner-container');
+            if (!container || container.offsetWidth === 0) {
+                // Если контейнер ещё не отрендерился — пробуем чуть позже
+                setTimeout(startScanner, 200);
+                return;
+            }
+
             state.scanner = new Html5Qrcode("qr-reader");
             const config = {
                 fps: 10,
@@ -528,7 +736,10 @@
             ).catch(err => {
                 console.error('Scanner start error:', err);
                 state.scanner = null;
-                alert('Не удалось включить камеру: ' + err);
+                // На iOS первый запуск может потребовать ещё одной попытки
+                setTimeout(() => {
+                    if (!state.scanner && state.mode === 'return') startScanner();
+                }, 600);
             });
         }
 
@@ -544,15 +755,8 @@
             if (!state.scanner) return;
             const sc = state.scanner;
             state.scanner = null;
-            try {
-                if (sc.isScanning) {
-                    await sc.stop();
-                }
-            } catch (e) { /* ignore */ }
-            try {
-                await sc.clear();
-            } catch (e) { /* ignore */ }
-            // Дополнительная зачистка DOM, который html5-qrcode мог оставить
+            try { if (sc.isScanning) await sc.stop(); } catch (e) {}
+            try { await sc.clear(); } catch (e) {}
             const reader = document.getElementById('qr-reader');
             if (reader) reader.innerHTML = '';
         }
@@ -573,7 +777,7 @@
         }
 
         // ============================================================
-        // ПРОВЕРКА В МОЙСКЛАД
+        // ПРОВЕРКА В МОЙСКЛАД (режим возврата)
         // ============================================================
         async function checkBarcodeOnServer() {
             showStage('check');
@@ -601,7 +805,7 @@
                     showStage('already');
                     document.getElementById('already-barcode').textContent = state.barcode;
                 } else if (data.status === 'ready') {
-                    startRecording();
+                    startReturnRecording();
                 } else {
                     throw new Error('Неизвестный статус: ' + data.status);
                 }
@@ -638,7 +842,7 @@
                 }
                 if (checkData.status === 'ready') {
                     btn.disabled = false; btn.innerHTML = origText;
-                    startRecording();
+                    startReturnRecording();
                     return;
                 }
 
@@ -651,7 +855,7 @@
                 if (!createResp.ok) throw new Error(createData.error || 'Ошибка создания');
 
                 btn.disabled = false; btn.innerHTML = origText;
-                startRecording();
+                startReturnRecording();
             } catch (err) {
                 btn.disabled = false; btn.innerHTML = origText;
                 alert('Не удалось создать возврат: ' + (err.message || err));
@@ -659,11 +863,28 @@
         }
 
         // ============================================================
-        // ЗАПИСЬ ВИДЕО (с автосохранением в IndexedDB)
+        // ЗАПИСЬ ВИДЕО (общая для обоих режимов)
         // ============================================================
-        async function startRecording() {
+        async function startReturnRecording() {
+            // Возврат: ключ записи = ШК; имя файла = ШК.mp4
+            state.recordKey = state.barcode;
+            state.currentFilename = null; // сформируется при загрузке
+            await openCameraForRecording('Номер возврата', state.barcode);
+        }
+
+        async function startShipmentRecording() {
+            // Отгрузка: ключ = "Отгрузка_DD_MM_YYYY"; имя файла такое же + .mp4
+            const dateStr = formatShipmentDate();
+            state.recordKey = `Отгрузка_${dateStr}`;
+            state.barcode = null;
+            state.currentFilename = null;
+            await openCameraForRecording('Дата отгрузки', dateStr.replace(/_/g, '.'));
+        }
+
+        async function openCameraForRecording(displayLabel, displayValue) {
             showStage('record');
-            document.getElementById('display-barcode').textContent = state.barcode;
+            document.getElementById('record-info-label').textContent = displayLabel;
+            document.getElementById('display-barcode').textContent = displayValue;
             const btn = document.getElementById('btn-record');
             btn.className = 'btn btn-primary';
             btn.innerHTML = '🎥 Начать запись';
@@ -678,7 +899,7 @@
                 document.getElementById('video-preview').srcObject = state.stream;
             } catch (err) {
                 alert('Не удалось включить камеру: ' + err.message);
-                cancelAndScan();
+                cancelAndGoHome();
             }
         }
 
@@ -728,10 +949,12 @@
 
         async function saveChunksToDB(isFinal) {
             try {
-                if (!state.barcode || !state.chunks.length) return;
+                if (!state.recordKey || !state.chunks.length) return;
                 const blob = new Blob(state.chunks, { type: state.recorder?.mimeType || 'video/mp4' });
                 const ext = (state.recorder?.mimeType || '').includes('mp4') ? 'mp4' : 'webm';
                 await dbPut({
+                    key: state.recordKey,
+                    mode: state.mode,
                     barcode: state.barcode,
                     blob: blob,
                     mimeType: state.recorder?.mimeType || 'video/mp4',
@@ -768,16 +991,25 @@
         }
 
         async function cancelAndScan() {
-            if (state.stream) {
-                state.stream.getTracks().forEach(t => t.stop());
-                state.stream = null;
-            }
+            if (state.stream) { state.stream.getTracks().forEach(t => t.stop()); state.stream = null; }
             await stopScanner();
             state.barcode = null;
+            state.recordKey = null;
             state.videoBlob = null;
             showStage('scan');
             await new Promise(r => setTimeout(r, 200));
             startScanner();
+            renderPendingBanner();
+        }
+
+        async function cancelAndGoHome() {
+            if (state.stream) { state.stream.getTracks().forEach(t => t.stop()); state.stream = null; }
+            await stopScanner();
+            state.barcode = null;
+            state.recordKey = null;
+            state.videoBlob = null;
+            await new Promise(r => setTimeout(r, 200));
+            goHome();
             renderPendingBanner();
         }
 
@@ -787,9 +1019,19 @@
         async function uploadVideo() {
             showStage('upload');
             const ext = state.videoBlob.fileExtension || 'mp4';
-            const filename = `${state.barcode}.${ext}`;
+
+            // Имя файла зависит от режима
+            const filename = state.mode === 'shipment'
+                ? `${state.recordKey}.${ext}` // "Отгрузка_28_04_2026.mp4"
+                : `${state.barcode}.${ext}`;
+
+            state.currentFilename = filename;
+
             const sizeMB = (state.videoBlob.size / 1024 / 1024).toFixed(1);
-            document.getElementById('upload-barcode').textContent = state.barcode;
+            document.getElementById('upload-info-label').textContent =
+                state.mode === 'shipment' ? 'Отгрузка' : 'Номер возврата';
+            document.getElementById('upload-barcode').textContent =
+                state.mode === 'shipment' ? state.recordKey.replace('Отгрузка_', '').replace(/_/g, '.') : state.barcode;
             document.getElementById('upload-filename').textContent = filename;
             document.getElementById('upload-size').textContent = `${sizeMB} МБ`;
 
@@ -799,7 +1041,8 @@
             }
 
             const formData = new FormData();
-            formData.append('barcode', state.barcode);
+            formData.append('mode', state.mode);
+            formData.append('barcode', state.barcode || '');
             formData.append('filename', filename);
             formData.append('video', state.videoBlob, filename);
 
@@ -807,13 +1050,13 @@
                 updateProgress(0, 'Подключение к серверу...');
                 await uploadWithProgress(formData);
                 updateProgress(100, 'Готово');
-                await dbDelete(state.barcode);
-                addToHistory(state.barcode, true);
+                await dbDelete(state.recordKey);
+                addToHistory(state.recordKey, state.mode, true);
                 showDone();
                 renderPendingBanner();
             } catch (err) {
                 showUploadError(err.message || String(err));
-                addToHistory(state.barcode, false);
+                addToHistory(state.recordKey, state.mode, false);
             }
         }
 
@@ -866,18 +1109,22 @@
                 </div>
                 <button class="btn btn-primary" onclick="uploadVideo()">↻ Повторить попытку</button>
                 <div style="height: 8px;"></div>
-                <button class="btn btn-secondary" onclick="resetAndScan()">← Позже</button>
+                <button class="btn btn-secondary" onclick="resetAndGoHome()">← Позже</button>
             `;
         }
 
         function showDone() {
             showStage('done');
-            document.getElementById('done-barcode').textContent = state.barcode;
+            const subtitle = state.mode === 'shipment'
+                ? state.recordKey.replace('Отгрузка_', '').replace(/_/g, '.')
+                : state.barcode;
+            document.getElementById('done-barcode').textContent = subtitle;
         }
 
-        async function resetAndScan() {
+        async function resetAndGoHome() {
             await stopScanner();
             state.barcode = null;
+            state.recordKey = null;
             state.videoBlob = null;
             state.chunks = [];
             updateProgress(0, 'Подготовка...');
@@ -886,9 +1133,8 @@
             btn.className = 'btn btn-primary';
             btn.innerHTML = '🎥 Начать запись';
             document.getElementById('rec-ind').classList.add('hidden');
-            showStage('scan');
             await new Promise(r => setTimeout(r, 200));
-            startScanner();
+            goHome();
             renderPendingBanner();
         }
 
@@ -942,9 +1188,9 @@
                 <div class="card">
                     ${items.map(it => `
                         <div class="pending-list-item">
-                            <div class="pending-list-code">${escapeHtml(it.barcode)}</div>
+                            <div class="pending-list-code">${escapeHtml(it.key)}</div>
                             <div class="pending-list-time">${formatTime(it.savedAt)}</div>
-                            <button class="btn btn-warning" style="width: auto; padding: 8px 14px; font-size: 13px;" data-bc="${escapeHtml(it.barcode)}">Загрузить</button>
+                            <button class="btn btn-warning" style="width: auto; padding: 8px 14px; font-size: 13px;" data-key="${escapeHtml(it.key)}">Загрузить</button>
                         </div>
                     `).join('')}
                 </div>
@@ -952,10 +1198,10 @@
             `;
             main.dataset.savedHtml = main.innerHTML;
             main.innerHTML = html;
-            main.querySelectorAll('button[data-bc]').forEach(b => {
+            main.querySelectorAll('button[data-key]').forEach(b => {
                 b.onclick = async () => {
-                    const bc = b.getAttribute('data-bc');
-                    const rec = await dbGet(bc);
+                    const k = b.getAttribute('data-key');
+                    const rec = await dbGet(k);
                     if (rec) {
                         main.innerHTML = main.dataset.savedHtml;
                         delete main.dataset.savedHtml;
@@ -967,14 +1213,18 @@
                 main.innerHTML = main.dataset.savedHtml;
                 delete main.dataset.savedHtml;
                 await new Promise(r => setTimeout(r, 100));
-                showStage('scan');
-                startScanner();
+                applyMode(state.mode);
+                goHome();
                 renderPendingBanner();
             };
         }
 
         function retryPending(record) {
-            state.barcode = record.barcode;
+            // Восстанавливаем состояние из записи и сразу запускаем загрузку
+            state.mode = record.mode || 'return';
+            applyMode(state.mode);
+            state.recordKey = record.key;
+            state.barcode = record.barcode || (record.mode === 'return' ? record.key : null);
             state.videoBlob = record.blob;
             state.videoBlob.fileExtension = record.ext || 'mp4';
             uploadVideo();
@@ -994,8 +1244,8 @@
         // ============================================================
         // ИСТОРИЯ
         // ============================================================
-        function addToHistory(code, success) {
-            const item = { code, success, time: new Date().toISOString() };
+        function addToHistory(key, mode, success) {
+            const item = { key, mode, success, time: new Date().toISOString() };
             state.history.unshift(item);
             state.history = state.history.slice(0, 30);
             localStorage.setItem('history', JSON.stringify(state.history));
@@ -1005,7 +1255,11 @@
         function renderHistory() {
             const list = document.getElementById('history-list');
             const today = new Date().toDateString();
-            const todayItems = state.history.filter(i => new Date(i.time).toDateString() === today);
+            // Показываем только записи текущего режима
+            const todayItems = state.history.filter(i =>
+                new Date(i.time).toDateString() === today &&
+                (i.mode || 'return') === state.mode
+            );
             if (todayItems.length === 0) {
                 list.innerHTML = '<div style="color: var(--text-mute); font-size: 13px; padding: 8px 0;">Ещё ничего не обработано</div>';
                 return;
@@ -1013,10 +1267,13 @@
             list.innerHTML = todayItems.map(i => {
                 const t = new Date(i.time);
                 const time = `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`;
+                const display = (i.mode === 'shipment')
+                    ? String(i.key).replace('Отгрузка_', '').replace(/_/g, '.')
+                    : i.key;
                 return `
                     <div class="history-item">
                         <div class="history-status ${i.success ? '' : 'error'}"></div>
-                        <div class="history-code">${escapeHtml(i.code)}</div>
+                        <div class="history-code">${escapeHtml(display)}</div>
                         <div class="history-time">${time}</div>
                     </div>`;
             }).join('');
@@ -1031,18 +1288,35 @@
             if (panel.classList.contains('open')) {
                 document.getElementById('backend-url').value = state.backendUrl;
                 document.getElementById('api-key').value = state.apiKey;
+                // Отметить активный режим в радио-переключателе
+                document.querySelectorAll('input[name="mode"]').forEach(r => {
+                    r.checked = (r.value === state.mode);
+                });
             }
         }
 
-        function saveSettings() {
+        async function saveSettings() {
             const url = document.getElementById('backend-url').value.trim().replace(/\/$/, '');
             const key = document.getElementById('api-key').value.trim();
             if (!url) { alert('Укажите адрес сервера'); return; }
+            const selectedMode = (document.querySelector('input[name="mode"]:checked') || {}).value || 'return';
+
+            const modeChanged = selectedMode !== state.mode;
             state.backendUrl = url;
             state.apiKey = key;
             localStorage.setItem('backendUrl', url);
             localStorage.setItem('apiKey', key);
-            toggleSettings();
+
+            if (modeChanged) {
+                await stopScanner();
+                applyMode(selectedMode);
+                renderHistory();
+                toggleSettings();
+                await new Promise(r => setTimeout(r, 200));
+                goHome();
+            } else {
+                toggleSettings();
+            }
         }
 
         function updateNetStatus() {
@@ -1054,22 +1328,22 @@
         window.addEventListener('offline', updateNetStatus);
 
         // ============================================================
-        // ИНИЦИАЛИЗАЦИЯ
+        // ИНИЦИАЛИЗАЦИЯ — надёжный старт камеры
         // ============================================================
         async function bootstrap() {
             updateNetStatus();
+            applyMode(state.mode);
             renderHistory();
             await renderPendingBanner();
+
             if (!state.backendUrl) {
                 toggleSettings();
                 return;
             }
-            showStage('scan');
-            // Даём DOM и видео-элементу время полностью отрендериться,
-            // прежде чем html5-qrcode попытается захватить камеру.
-            // На iOS Safari при первой загрузке без этой паузы камера часто не стартует.
-            await new Promise(r => setTimeout(r, 500));
-            startScanner();
+
+            // Ждём пока DOM устаканится — два кадра анимации
+            await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+            goHome();
         }
 
         if (document.readyState === 'complete') {
