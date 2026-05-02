@@ -1,4 +1,4 @@
-// СКЛАД · ВОЗВРАТЫ — Бэкенд
+// СКЛАД · ВОЗВРАТЫ — Бэкенд (с поддержкой режимов)
 
 import 'dotenv/config';
 import express from 'express';
@@ -45,6 +45,8 @@ const upload = multer({
 });
 
 const FIELD_NAME = process.env.MOYSKLAD_VIDEO_FIELD_NAME || 'Видео';
+const RETURNS_FOLDER = process.env.YANDEX_DISK_FOLDER || 'Returns';
+const SHIPMENT_FOLDER = process.env.YANDEX_DISK_SHIPMENT_FOLDER || 'Shipments';
 
 // ---------- Health ----------
 app.get('/api/health', (req, res) => {
@@ -52,12 +54,13 @@ app.get('/api/health', (req, res) => {
     status: 'ok',
     yandex: !!process.env.YANDEX_DISK_TOKEN,
     moysklad: !!process.env.MOYSKLAD_TOKEN,
-    folder: process.env.YANDEX_DISK_FOLDER || 'Returns',
+    folder_returns: RETURNS_FOLDER,
+    folder_shipments: SHIPMENT_FOLDER,
     field: FIELD_NAME,
   });
 });
 
-// ---------- Проверка ШК в МойСклад ----------
+// ---------- Проверка ШК (только для режима возвратов) ----------
 app.post('/api/check-barcode', async (req, res) => {
   const barcode = (req.body && req.body.barcode || '').trim();
   console.log(`\n[${new Date().toISOString()}] Check barcode: ${barcode}`);
@@ -88,7 +91,6 @@ app.post('/api/create-return', async (req, res) => {
   if (!process.env.MOYSKLAD_TOKEN) return res.status(500).json({ error: 'Не настроен MOYSKLAD_TOKEN' });
 
   try {
-    // Сначала ещё раз проверим, что его действительно нет (на случай гонки)
     const check = await checkReturnByNumber({
       token: process.env.MOYSKLAD_TOKEN,
       fieldName: FIELD_NAME,
@@ -98,7 +100,6 @@ app.post('/api/create-return', async (req, res) => {
       console.log(`  ! документ уже существует (${check.status})`);
       return res.json({ ok: true, alreadyExists: true });
     }
-
     const created = await createReturn({
       token: process.env.MOYSKLAD_TOKEN,
       returnNumber: barcode,
@@ -115,47 +116,66 @@ app.post('/api/create-return', async (req, res) => {
 async function handleUpload(req, res) {
   const startedAt = Date.now();
   const file = req.file;
+  const mode = (req.body.mode || 'return').trim();
   const barcode = (req.body.barcode || '').trim();
   const filenameFromClient = (req.body.filename || '').trim();
   const user = (req.body.user || 'unknown').trim();
 
-  console.log(`\n[${new Date().toISOString()}] Upload start`);
+  console.log(`\n[${new Date().toISOString()}] Upload start [${mode}]`);
   console.log(`  barcode: ${barcode}`);
   console.log(`  filename: ${filenameFromClient}`);
   console.log(`  user: ${user}`);
   console.log(`  file: ${file?.originalname} (${file?.size} bytes, ${file?.mimetype})`);
 
   if (!file) return res.status(400).json({ success: false, error: 'Видео не получено' });
-  if (!barcode) {
-    cleanup(file.path);
-    return res.status(400).json({ success: false, error: 'Не указан штрихкод' });
-  }
   if (!process.env.YANDEX_DISK_TOKEN) {
     cleanup(file.path);
     return res.status(500).json({ success: false, error: 'Не настроен YANDEX_DISK_TOKEN' });
   }
 
-  let remoteName;
-  if (filenameFromClient && filenameFromClient.startsWith(barcode)) {
-    remoteName = filenameFromClient;
+  // Определяем папку и стратегию переименования по режиму
+  let folder, suffixStrategy, remoteName;
+
+  if (mode === 'shipment') {
+    folder = SHIPMENT_FOLDER;
+    suffixStrategy = 'numeric'; // _1, _2, _3
+    if (filenameFromClient) {
+      remoteName = filenameFromClient;
+    } else {
+      const ext = path.extname(file.originalname) || '.mp4';
+      remoteName = `Shipment${ext}`;
+    }
   } else {
-    const ext = path.extname(file.originalname) || '.mp4';
-    remoteName = `${barcode}${ext}`;
+    // mode === 'return' (по умолчанию)
+    if (!barcode) {
+      cleanup(file.path);
+      return res.status(400).json({ success: false, error: 'Не указан штрихкод' });
+    }
+    folder = RETURNS_FOLDER;
+    suffixStrategy = 'new'; // _new, _new_2
+    if (filenameFromClient && filenameFromClient.startsWith(barcode)) {
+      remoteName = filenameFromClient;
+    } else {
+      const ext = path.extname(file.originalname) || '.mp4';
+      remoteName = `${barcode}${ext}`;
+    }
   }
 
   let warning = null;
 
   try {
-    console.log('  → Yandex Disk: uploading...');
+    console.log(`  → Yandex Disk: uploading to /${folder}/${remoteName}...`);
     const link = await uploadToYandexDisk({
       token: process.env.YANDEX_DISK_TOKEN,
-      folder: process.env.YANDEX_DISK_FOLDER || 'Returns',
+      folder,
       remoteName,
       localPath: file.path,
+      suffixStrategy,
     });
     console.log(`  ✓ Yandex Disk: ${link}`);
 
-    if (process.env.MOYSKLAD_TOKEN) {
+    // МойСклад обновляем только в режиме возвратов
+    if (mode === 'return' && process.env.MOYSKLAD_TOKEN) {
       try {
         console.log('  → МойСклад: updating return...');
         await updateReturnVideoField({
@@ -169,15 +189,13 @@ async function handleUpload(req, res) {
         console.error('  ✗ МойСклад error:', e.message);
         warning = `Видео загружено, но МойСклад не обновлён: ${e.message}`;
       }
-    } else {
-      warning = 'MOYSKLAD_TOKEN не настроен — поле в МойСклад не обновлено';
     }
 
     cleanup(file.path);
     const duration = Date.now() - startedAt;
     console.log(`  ✓ DONE in ${duration}ms\n`);
 
-    res.json({ success: true, barcode, link, warning, durationMs: duration });
+    res.json({ success: true, mode, barcode, link, warning, durationMs: duration });
   } catch (e) {
     console.error('  ✗ FATAL:', e);
     cleanup(file.path);
@@ -200,5 +218,7 @@ app.listen(PORT, () => {
   console.log(`  Port:        ${PORT}`);
   console.log(`  Yandex.Disk: ${process.env.YANDEX_DISK_TOKEN ? '✓' : '✗ MISSING'}`);
   console.log(`  МойСклад:    ${process.env.MOYSKLAD_TOKEN ? '✓' : '✗ MISSING'}`);
+  console.log(`  Returns folder:   ${RETURNS_FOLDER}`);
+  console.log(`  Shipments folder: ${SHIPMENT_FOLDER}`);
   console.log('============================================================');
 });
