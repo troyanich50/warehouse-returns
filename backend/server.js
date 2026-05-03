@@ -1,4 +1,4 @@
-// СКЛАД · ВОЗВРАТЫ — Бэкенд (с поддержкой режимов)
+// СКЛАД · ВОЗВРАТЫ — Бэкенд (с поддержкой режимов и статусов)
 
 import 'dotenv/config';
 import express from 'express';
@@ -48,6 +48,9 @@ const FIELD_NAME = process.env.MOYSKLAD_VIDEO_FIELD_NAME || 'Видео';
 const RETURNS_FOLDER = process.env.YANDEX_DISK_FOLDER || 'Returns';
 const SHIPMENT_FOLDER = process.env.YANDEX_DISK_SHIPMENT_FOLDER || 'Shipments';
 
+const STATUS_UNPACKED = 'Распакован';
+const STATUS_ATTENTION = 'Требует внимания';
+
 // ---------- Health ----------
 app.get('/api/health', (req, res) => {
   res.json({
@@ -60,7 +63,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// ---------- Проверка ШК (только для режима возвратов) ----------
+// ---------- Проверка ШК ----------
 app.post('/api/check-barcode', async (req, res) => {
   const barcode = (req.body && req.body.barcode || '').trim();
   console.log(`\n[${new Date().toISOString()}] Check barcode: ${barcode}`);
@@ -120,11 +123,16 @@ async function handleUpload(req, res) {
   const barcode = (req.body.barcode || '').trim();
   const filenameFromClient = (req.body.filename || '').trim();
   const user = (req.body.user || 'unknown').trim();
+  // Новые поля для статусов:
+  const attentionRaw = (req.body.attention || '').toString().trim().toLowerCase();
+  const attention = attentionRaw === 'true' || attentionRaw === '1' || attentionRaw === 'yes';
+  const comment = (req.body.comment || '').toString().trim();
 
   console.log(`\n[${new Date().toISOString()}] Upload start [${mode}]`);
   console.log(`  barcode: ${barcode}`);
   console.log(`  filename: ${filenameFromClient}`);
   console.log(`  user: ${user}`);
+  console.log(`  attention: ${attention}, comment: "${comment}"`);
   console.log(`  file: ${file?.originalname} (${file?.size} bytes, ${file?.mimetype})`);
 
   if (!file) return res.status(400).json({ success: false, error: 'Видео не получено' });
@@ -133,12 +141,11 @@ async function handleUpload(req, res) {
     return res.status(500).json({ success: false, error: 'Не настроен YANDEX_DISK_TOKEN' });
   }
 
-  // Определяем папку и стратегию переименования по режиму
   let folder, suffixStrategy, remoteName;
 
   if (mode === 'shipment') {
     folder = SHIPMENT_FOLDER;
-    suffixStrategy = 'numeric'; // _1, _2, _3
+    suffixStrategy = 'numeric';
     if (filenameFromClient) {
       remoteName = filenameFromClient;
     } else {
@@ -146,13 +153,12 @@ async function handleUpload(req, res) {
       remoteName = `Shipment${ext}`;
     }
   } else {
-    // mode === 'return' (по умолчанию)
     if (!barcode) {
       cleanup(file.path);
       return res.status(400).json({ success: false, error: 'Не указан штрихкод' });
     }
     folder = RETURNS_FOLDER;
-    suffixStrategy = 'new'; // _new, _new_2
+    suffixStrategy = 'new';
     if (filenameFromClient && filenameFromClient.startsWith(barcode)) {
       remoteName = filenameFromClient;
     } else {
@@ -174,17 +180,19 @@ async function handleUpload(req, res) {
     });
     console.log(`  ✓ Yandex Disk: ${link}`);
 
-    // МойСклад обновляем только в режиме возвратов
     if (mode === 'return' && process.env.MOYSKLAD_TOKEN) {
       try {
         console.log('  → МойСклад: updating return...');
+        const targetStatus = attention ? STATUS_ATTENTION : STATUS_UNPACKED;
         await updateReturnVideoField({
           token: process.env.MOYSKLAD_TOKEN,
           fieldName: FIELD_NAME,
           returnNumber: barcode,
           link,
+          statusName: targetStatus,
+          comment: attention ? comment : null,
         });
-        console.log('  ✓ МойСклад: updated');
+        console.log(`  ✓ МойСклад: updated → status "${targetStatus}"`);
       } catch (e) {
         console.error('  ✗ МойСклад error:', e.message);
         warning = `Видео загружено, но МойСклад не обновлён: ${e.message}`;
@@ -195,7 +203,15 @@ async function handleUpload(req, res) {
     const duration = Date.now() - startedAt;
     console.log(`  ✓ DONE in ${duration}ms\n`);
 
-    res.json({ success: true, mode, barcode, link, warning, durationMs: duration });
+    res.json({
+      success: true,
+      mode,
+      barcode,
+      link,
+      attention,
+      warning,
+      durationMs: duration,
+    });
   } catch (e) {
     console.error('  ✗ FATAL:', e);
     cleanup(file.path);
