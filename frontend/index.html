@@ -196,7 +196,6 @@
         }
         .editable-code:focus { outline: none; border-color: var(--accent); }
 
-        /* Текстовое поле для описания проблемы */
         .attention-textarea {
             font-family: 'Manrope', sans-serif;
             font-size: 15px; width: 100%;
@@ -360,7 +359,6 @@
 
             <!-- ====== ОБЩИЕ ЭТАПЫ ====== -->
 
-            <!-- Этап: запись -->
             <div id="stage-record" class="hidden">
                 <div class="stage-label" id="record-step-label">Шаг 2 из 3</div>
                 <div class="stage-title" id="record-title">Запись распаковки</div>
@@ -377,41 +375,11 @@
                     <div class="save-badge" id="save-badge">💾 Сохранено</div>
                 </div>
                 <button class="btn btn-primary" id="btn-record" onclick="toggleRecording()">🎥 Начать запись</button>
-                <div style="margin-top: 10px;">
-                    <button class="btn btn-warning hidden" id="btn-attention" onclick="goToAttentionForm()">⚠ Внимание!</button>
-                </div>
                 <div style="margin-top: 12px;">
                     <button class="btn btn-secondary" onclick="cancelAndGoHome()">← Назад</button>
                 </div>
             </div>
 
-            <!-- Этап: ввод описания проблемы (только режим возврата) -->
-            <div id="stage-attention" class="hidden">
-                <div class="warn-icon">
-                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                        <line x1="12" y1="9" x2="12" y2="13"></line>
-                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
-                    </svg>
-                </div>
-                <div class="done-title" style="text-align:center;">Опишите проблему</div>
-                <div class="done-subtitle" style="text-align:center;">Текст попадёт в комментарий возврата в МойСклад. Статус возврата будет «Требует внимания».</div>
-                <div class="card">
-                    <div class="card-label">Номер возврата</div>
-                    <div class="card-value" id="attention-barcode">—</div>
-                </div>
-                <div class="card">
-                    <div class="card-label">Описание проблемы</div>
-                    <textarea class="attention-textarea" id="attention-text" placeholder="Например: повреждена упаковка, не хватает товара, видны следы использования..."></textarea>
-                </div>
-                <button class="btn btn-warning" id="btn-attention-submit" onclick="submitWithAttention()">
-                    Отправить с пометкой
-                </button>
-                <div style="height: 10px;"></div>
-                <button class="btn btn-secondary" onclick="goBackFromAttention()">← Назад к записи</button>
-            </div>
-
-            <!-- Этап: загрузка -->
             <div id="stage-upload" class="hidden">
                 <div class="stage-label" id="upload-step-label">Шаг 3 из 3</div>
                 <div class="stage-title">Загрузка и сохранение</div>
@@ -434,7 +402,7 @@
                 <div id="upload-msgs" style="margin-top: 20px;"></div>
             </div>
 
-            <!-- Этап: готово -->
+            <!-- ГОТОВО — теперь две кнопки в режиме возврата -->
             <div id="stage-done" class="hidden">
                 <div class="done-screen">
                     <div class="done-icon" id="done-icon-circle">
@@ -445,6 +413,51 @@
                     <div class="done-title" id="done-title">Возврат обработан</div>
                     <div class="done-subtitle" id="done-barcode">—</div>
                     <button class="btn btn-primary" id="done-next-btn" onclick="resetAndGoHome()">Следующий →</button>
+                    <div id="done-attention-block" style="margin-top: 12px;">
+                        <button class="btn btn-warning" onclick="goToAttentionForm()">⚠ Сообщить о проблеме</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Этап ввода описания проблемы -->
+            <div id="stage-attention" class="hidden">
+                <div class="warn-icon">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    </svg>
+                </div>
+                <div class="done-title" style="text-align:center;">Опишите проблему</div>
+                <div class="done-subtitle" style="text-align:center;">Текст попадёт в комментарий возврата в МойСклад. Статус будет изменён на «Требует внимания».</div>
+                <div class="card">
+                    <div class="card-label">Номер возврата</div>
+                    <div class="card-value" id="attention-barcode">—</div>
+                </div>
+                <div class="card">
+                    <div class="card-label">Описание проблемы</div>
+                    <textarea class="attention-textarea" id="attention-text" placeholder="Например: повреждена упаковка, не хватает товара, видны следы использования..."></textarea>
+                </div>
+                <button class="btn btn-warning" id="btn-attention-submit" onclick="submitAttention()">
+                    Отправить
+                </button>
+                <div style="height: 10px;"></div>
+                <button class="btn btn-secondary" onclick="goBackFromAttention()">← Отмена</button>
+            </div>
+
+            <!-- Финальный экран после "Внимание!" -->
+            <div id="stage-attention-done" class="hidden">
+                <div class="done-screen">
+                    <div class="done-icon attention">
+                        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="9" x2="12" y2="13"></line>
+                            <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                        </svg>
+                    </div>
+                    <div class="done-title">Отмечено: требует внимания</div>
+                    <div class="done-subtitle" id="attention-done-barcode">—</div>
+                    <button class="btn btn-primary" onclick="resetAndGoHome()">Следующий возврат →</button>
                 </div>
             </div>
 
@@ -588,9 +601,8 @@
             recTimer: null,
             scanner: null,
             currentFilename: null,
-            // Поля для "Внимание!"
-            attention: false,
-            attentionComment: '',
+            // Последний обработанный возврат (для возможной пометки "Внимание!")
+            lastBarcode: null,
             backendUrl: localStorage.getItem('backendUrl') || '',
             apiKey: localStorage.getItem('apiKey') || '',
             history: JSON.parse(localStorage.getItem('history') || '[]'),
@@ -641,7 +653,7 @@
         }
 
         function showStage(stage) {
-            ['scan','check','notfound','already','shipment-home','record','attention','upload','done'].forEach(s => {
+            ['scan','check','notfound','already','shipment-home','record','upload','done','attention','attention-done'].forEach(s => {
                 const el = document.getElementById('stage-' + s);
                 if (el) el.classList.add('hidden');
             });
@@ -656,14 +668,14 @@
                 });
                 if (['scan','check','notfound','already'].includes(stage)) {
                     document.getElementById('step-1').classList.add('active');
-                } else if (stage === 'record' || stage === 'attention') {
+                } else if (stage === 'record') {
                     document.getElementById('step-1').classList.add('done');
                     document.getElementById('step-2').classList.add('active');
                 } else if (stage === 'upload') {
                     document.getElementById('step-1').classList.add('done');
                     document.getElementById('step-2').classList.add('done');
                     document.getElementById('step-3').classList.add('active');
-                } else if (stage === 'done') {
+                } else if (stage === 'done' || stage === 'attention' || stage === 'attention-done') {
                     steps.forEach(s => document.getElementById(s).classList.add('done'));
                 }
             }
@@ -858,8 +870,6 @@
         async function startReturnRecording() {
             state.recordKey = state.barcode;
             state.currentFilename = null;
-            state.attention = false;
-            state.attentionComment = '';
             await openCameraForRecording('Номер возврата', state.barcode);
         }
 
@@ -868,8 +878,6 @@
             state.recordKey = `Отгрузка_${dateStr}`;
             state.barcode = null;
             state.currentFilename = null;
-            state.attention = false;
-            state.attentionComment = '';
             await openCameraForRecording('Дата отгрузки', dateStr.replace(/_/g, '.'));
         }
 
@@ -877,15 +885,9 @@
             showStage('record');
             document.getElementById('record-info-label').textContent = displayLabel;
             document.getElementById('display-barcode').textContent = displayValue;
-
             const btn = document.getElementById('btn-record');
             btn.className = 'btn btn-primary';
             btn.innerHTML = '🎥 Начать запись';
-
-            // Кнопка "Внимание!" — только в режиме возврата
-            const attentionBtn = document.getElementById('btn-attention');
-            attentionBtn.classList.toggle('hidden', state.mode !== 'return');
-
             document.getElementById('rec-ind').classList.add('hidden');
             document.getElementById('save-badge').classList.remove('visible');
 
@@ -931,16 +933,7 @@
                 state.videoBlob = new Blob(state.chunks, { type: state.recorder.mimeType });
                 state.videoBlob.fileExtension = ext;
                 await saveChunksToDB(true);
-                // После остановки записи — либо сразу загружаем (по обычной кнопке),
-                // либо ждём, что пользователь уже нажал "Внимание!" перед остановкой
-                if (state.attention) {
-                    // Кладовщик нажал "Внимание!" во время записи — ушли на ввод текста
-                    showStage('attention');
-                    document.getElementById('attention-barcode').textContent = state.barcode;
-                    document.getElementById('attention-text').value = state.attentionComment || '';
-                } else {
-                    uploadVideo();
-                }
+                uploadVideo();
             };
             state.recorder.start(1000);
             state.recording = true;
@@ -968,8 +961,6 @@
                     ext: ext,
                     savedAt: Date.now(),
                     finalized: isFinal,
-                    attention: state.attention,
-                    attentionComment: state.attentionComment,
                 });
                 const badge = document.getElementById('save-badge');
                 badge.classList.add('visible');
@@ -999,65 +990,12 @@
             }
         }
 
-        // Кнопка "Внимание!" на экране записи
-        function goToAttentionForm() {
-            // Помечаем что отмечено внимание
-            state.attention = true;
-            // Если идёт запись — останавливаем, дальше ondataavailable + onstop отведут на форму
-            if (state.recording) {
-                stopRecord();
-                return;
-            }
-            // Если запись не начиналась (кладовщик сразу нажал "Внимание!") —
-            // нет смысла; всё равно нужно сначала записать видео
-            if (!state.videoBlob) {
-                alert('Сначала запишите видео — затем нажмите "Внимание!" чтобы добавить описание проблемы.');
-                state.attention = false;
-                return;
-            }
-            // Если запись была завершена ранее — переходим к форме
-            showStage('attention');
-            document.getElementById('attention-barcode').textContent = state.barcode;
-            document.getElementById('attention-text').value = state.attentionComment || '';
-        }
-
-        function goBackFromAttention() {
-            // Возврат к экрану записи — если видео уже записано, кладовщик может
-            // нажать "Загрузить" обычной кнопкой, тогда снимем флаг attention
-            state.attention = false;
-            state.attentionComment = document.getElementById('attention-text').value;
-            showStage('record');
-            // Включаем кнопку обычной отправки
-            const btn = document.getElementById('btn-record');
-            btn.className = 'btn btn-success';
-            btn.innerHTML = '✓ Всё в порядке — отправить';
-            btn.onclick = () => {
-                state.attention = false;
-                state.attentionComment = '';
-                btn.onclick = toggleRecording;
-                uploadVideo();
-            };
-        }
-
-        function submitWithAttention() {
-            const text = document.getElementById('attention-text').value.trim();
-            if (!text) {
-                alert('Опишите проблему — это поле обязательно');
-                return;
-            }
-            state.attention = true;
-            state.attentionComment = text;
-            uploadVideo();
-        }
-
         async function cancelAndScan() {
             if (state.stream) { state.stream.getTracks().forEach(t => t.stop()); state.stream = null; }
             await stopScanner();
             state.barcode = null;
             state.recordKey = null;
             state.videoBlob = null;
-            state.attention = false;
-            state.attentionComment = '';
             showStage('scan');
             await new Promise(r => setTimeout(r, 200));
             startScanner();
@@ -1070,8 +1008,6 @@
             state.barcode = null;
             state.recordKey = null;
             state.videoBlob = null;
-            state.attention = false;
-            state.attentionComment = '';
             await new Promise(r => setTimeout(r, 200));
             goHome();
             renderPendingBanner();
@@ -1083,11 +1019,9 @@
         async function uploadVideo() {
             showStage('upload');
             const ext = state.videoBlob.fileExtension || 'mp4';
-
             const filename = state.mode === 'shipment'
                 ? `${state.recordKey}.${ext}`
                 : `${state.barcode}.${ext}`;
-
             state.currentFilename = filename;
 
             const sizeMB = (state.videoBlob.size / 1024 / 1024).toFixed(1);
@@ -1107,8 +1041,6 @@
             formData.append('mode', state.mode);
             formData.append('barcode', state.barcode || '');
             formData.append('filename', filename);
-            formData.append('attention', state.attention ? 'true' : 'false');
-            formData.append('comment', state.attentionComment || '');
             formData.append('video', state.videoBlob, filename);
 
             try {
@@ -1116,12 +1048,14 @@
                 await uploadWithProgress(formData);
                 updateProgress(100, 'Готово');
                 await dbDelete(state.recordKey);
-                addToHistory(state.recordKey, state.mode, true, state.attention);
+                addToHistory(state.recordKey, state.mode, true, false);
+                // Запоминаем последний обработанный номер для возможного "Внимание!"
+                state.lastBarcode = state.barcode;
                 showDone();
                 renderPendingBanner();
             } catch (err) {
                 showUploadError(err.message || String(err));
-                addToHistory(state.recordKey, state.mode, false, state.attention);
+                addToHistory(state.recordKey, state.mode, false, false);
             }
         }
 
@@ -1184,20 +1118,77 @@
                 ? state.recordKey.replace('Отгрузка_', '').replace(/_/g, '.')
                 : state.barcode;
             document.getElementById('done-barcode').textContent = subtitle;
+            // Сбрасываем стиль иконки на стандартный (зелёный)
+            document.getElementById('done-icon-circle').classList.remove('attention');
+            document.getElementById('done-title').textContent =
+                state.mode === 'return' ? 'Возврат обработан' : 'Отгрузка обработана';
+            // Кнопка "Сообщить о проблеме" — только в режиме возврата
+            const attentionBlock = document.getElementById('done-attention-block');
+            attentionBlock.classList.toggle('hidden', state.mode !== 'return');
+        }
 
-            // Меняем заголовок и иконку в зависимости от того, было ли "Внимание!"
-            const doneIcon = document.getElementById('done-icon-circle');
-            const doneTitle = document.getElementById('done-title');
-            if (state.attention) {
-                doneIcon.classList.add('attention');
-                doneTitle.textContent = 'Возврат отмечен — требует внимания';
-            } else {
-                doneIcon.classList.remove('attention');
-                if (state.mode === 'return') {
-                    doneTitle.textContent = 'Возврат обработан';
-                } else {
-                    doneTitle.textContent = 'Отгрузка обработана';
+        // ============================================================
+        // КНОПКА "ВНИМАНИЕ!" — только после успешной загрузки
+        // ============================================================
+        function goToAttentionForm() {
+            if (!state.lastBarcode) {
+                alert('Нет последнего обработанного возврата');
+                return;
+            }
+            showStage('attention');
+            document.getElementById('attention-barcode').textContent = state.lastBarcode;
+            document.getElementById('attention-text').value = '';
+            // Фокус на поле ввода для удобства
+            setTimeout(() => {
+                const ta = document.getElementById('attention-text');
+                if (ta) ta.focus();
+            }, 200);
+        }
+
+        function goBackFromAttention() {
+            // Возвращаемся на экран "Готово"
+            showStage('done');
+        }
+
+        async function submitAttention() {
+            const text = document.getElementById('attention-text').value.trim();
+            if (!text) {
+                alert('Опишите проблему — это поле обязательно');
+                return;
+            }
+            const barcode = state.lastBarcode;
+            if (!barcode) {
+                alert('Не удалось определить номер возврата');
+                return;
+            }
+
+            const btn = document.getElementById('btn-attention-submit');
+            const origText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<div class="spinner"></div> Отправка...';
+
+            try {
+                const r = await fetch(state.backendUrl + '/api/mark-attention', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ barcode, comment: text })
+                });
+                const data = await r.json();
+                if (!r.ok) throw new Error(data.error || 'Ошибка отправки');
+
+                // Обновляем последнюю запись в истории — теперь она "attention"
+                if (state.history.length > 0 && state.history[0].key === barcode) {
+                    state.history[0].attention = true;
+                    localStorage.setItem('history', JSON.stringify(state.history));
+                    renderHistory();
                 }
+
+                btn.disabled = false; btn.innerHTML = origText;
+                document.getElementById('attention-done-barcode').textContent = barcode;
+                showStage('attention-done');
+            } catch (err) {
+                btn.disabled = false; btn.innerHTML = origText;
+                alert('Не удалось отправить: ' + (err.message || err));
             }
         }
 
@@ -1207,17 +1198,13 @@
             state.recordKey = null;
             state.videoBlob = null;
             state.chunks = [];
-            state.attention = false;
-            state.attentionComment = '';
+            state.lastBarcode = null;
             updateProgress(0, 'Подготовка...');
             document.getElementById('upload-msgs').innerHTML = '';
             const btn = document.getElementById('btn-record');
             btn.className = 'btn btn-primary';
             btn.innerHTML = '🎥 Начать запись';
-            btn.onclick = toggleRecording;
             document.getElementById('rec-ind').classList.add('hidden');
-            // Сбрасываем иконку "готово"
-            document.getElementById('done-icon-circle').classList.remove('attention');
             await new Promise(r => setTimeout(r, 200));
             goHome();
             renderPendingBanner();
@@ -1311,8 +1298,6 @@
             state.barcode = record.barcode || (record.mode === 'return' ? record.key : null);
             state.videoBlob = record.blob;
             state.videoBlob.fileExtension = record.ext || 'mp4';
-            state.attention = !!record.attention;
-            state.attentionComment = record.attentionComment || '';
             uploadVideo();
         }
 
@@ -1355,9 +1340,6 @@
                 const display = (i.mode === 'shipment')
                     ? String(i.key).replace('Отгрузка_', '').replace(/_/g, '.')
                     : i.key;
-                let cssClass = 'success';
-                if (!i.success) cssClass = 'error';
-                else if (i.attention) cssClass = 'attention';
                 const dotClass = !i.success ? 'error' : (i.attention ? 'attention' : '');
                 return `
                     <div class="history-item">
