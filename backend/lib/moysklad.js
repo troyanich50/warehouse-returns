@@ -301,4 +301,53 @@ export async function updateReturnVideoField({
     const text = await r.text();
     throw new Error(`МойСклад: обновление не удалось: ${r.status} ${text}`);
   }
+  /**
+ * Помечает уже существующий возврат как "Требует внимания" и добавляет комментарий.
+ * Видео не трогается — оно к этому моменту уже загружено.
+ */
+export async function markReturnAttention({ token, returnNumber, statusName, comment }) {
+  if (!token) throw new Error('Не указан MOYSKLAD_TOKEN');
+
+  const found = await findReturnIdByNumber(token, returnNumber);
+  if (!found) throw new Error(`МойСклад: возврат "${returnNumber}" не найден`);
+
+  const doc = await fetchFullDoc(token, found.entity, found.id);
+  const body = {};
+
+  // Статус
+  if (statusName) {
+    try {
+      const statusMeta = await getStatusMeta(token, found.entity, statusName);
+      body.state = { meta: statusMeta.meta };
+    } catch (e) {
+      console.warn(`  МойСклад: не удалось установить статус "${statusName}": ${e.message}`);
+    }
+  }
+
+  // Комментарий — добавляем к существующему
+  if (comment && comment.trim()) {
+    const existingComment = doc.description || '';
+    const stamp = new Date().toLocaleString('ru-RU', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+    const newLine = `[${stamp}] ${comment.trim()}`;
+    body.description = existingComment ? `${existingComment}\n${newLine}` : newLine;
+  }
+
+  if (Object.keys(body).length === 0) {
+    return; // нечего обновлять
+  }
+
+  const url = `${API}/entity/${found.entity}/${found.id}`;
+  const r = await fetch(url, {
+    method: 'PUT',
+    headers: authHeaders(token),
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) {
+    const text = await r.text();
+    throw new Error(`МойСклад: обновление не удалось: ${r.status} ${text}`);
+  }
+}
 }
