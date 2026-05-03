@@ -9,8 +9,6 @@ const DEFAULT_STORE = 'ООО "АЛПАТОФФ" Возвраты';
 const DEFAULT_AGENT = 'Розничный покупатель';
 
 const STATUS_NEW = 'Новый';
-const STATUS_UNPACKED = 'Распакован';
-const STATUS_ATTENTION = 'Требует внимания';
 
 function authHeaders(token) {
   return {
@@ -22,7 +20,7 @@ function authHeaders(token) {
 }
 
 let cachedEntity = null;
-let cachedStatuses = null; // map: name → state object
+let cachedStatuses = null;
 
 function normalizeAttributes(input) {
   if (Array.isArray(input)) return input;
@@ -110,7 +108,6 @@ async function findRefByName(token, endpoint, name) {
   return rows[0];
 }
 
-// Загружаем все статусы сущности (один раз кешируем)
 async function loadStatuses(token, entity) {
   if (cachedStatuses) return cachedStatuses;
   const r = await fetch(`${API}/entity/${entity}/metadata`, { headers: authHeaders(token) });
@@ -169,7 +166,6 @@ export async function createReturn({ token, returnNumber }) {
     findRefByName(token, 'counterparty', DEFAULT_AGENT),
   ]);
 
-  // Пробуем найти статус "Новый" — если его нет, создадим документ без статуса
   let stateBlock = null;
   try {
     const statusMeta = await getStatusMeta(token, entity, STATUS_NEW);
@@ -201,10 +197,6 @@ export async function createReturn({ token, returnNumber }) {
 
 /**
  * Записывает ссылку на видео + опционально меняет статус и/или добавляет комментарий.
- * @param {string} statusName — имя статуса для установки (например, "Распакован" или "Требует внимания").
- *                              Если не указано — статус не меняется.
- * @param {string} comment    — текст для добавления в поле "Комментарий" документа.
- *                              Если не указан — комментарий не меняется.
  */
 export async function updateReturnVideoField({
   token,
@@ -262,10 +254,8 @@ export async function updateReturnVideoField({
   }
   if (!replaced) updatedAttrs.push(attrPayload);
 
-  // Собираем тело PUT-запроса
   const body = { attributes: updatedAttrs };
 
-  // Если просили — обновляем статус
   if (statusName) {
     try {
       const statusMeta = await getStatusMeta(token, entity, statusName);
@@ -273,11 +263,9 @@ export async function updateReturnVideoField({
       console.log(`  МойСклад: статус будет изменён на "${statusName}"`);
     } catch (e) {
       console.warn(`  МойСклад: не удалось установить статус "${statusName}": ${e.message}`);
-      // Не падаем — главное чтобы видео сохранилось
     }
   }
 
-  // Если просили — добавляем комментарий
   if (comment && comment.trim()) {
     const existingComment = doc.description || '';
     const stamp = new Date().toLocaleString('ru-RU', {
@@ -285,10 +273,8 @@ export async function updateReturnVideoField({
       hour: '2-digit', minute: '2-digit',
     });
     const newLine = `[${stamp}] ${comment.trim()}`;
-    body.description = existingComment
-      ? `${existingComment}\n${newLine}`
-      : newLine;
-    console.log(`  МойСклад: добавляется комментарий: ${newLine}`);
+    body.description = existingComment ? `${existingComment}\n${newLine}` : newLine;
+    console.log(`  МойСклад: добавляется комментарий`);
   }
 
   const url = `${API}/entity/${entity}/${id}`;
@@ -301,7 +287,9 @@ export async function updateReturnVideoField({
     const text = await r.text();
     throw new Error(`МойСклад: обновление не удалось: ${r.status} ${text}`);
   }
-  /**
+}
+
+/**
  * Помечает уже существующий возврат как "Требует внимания" и добавляет комментарий.
  * Видео не трогается — оно к этому моменту уже загружено.
  */
@@ -314,7 +302,6 @@ export async function markReturnAttention({ token, returnNumber, statusName, com
   const doc = await fetchFullDoc(token, found.entity, found.id);
   const body = {};
 
-  // Статус
   if (statusName) {
     try {
       const statusMeta = await getStatusMeta(token, found.entity, statusName);
@@ -324,7 +311,6 @@ export async function markReturnAttention({ token, returnNumber, statusName, com
     }
   }
 
-  // Комментарий — добавляем к существующему
   if (comment && comment.trim()) {
     const existingComment = doc.description || '';
     const stamp = new Date().toLocaleString('ru-RU', {
@@ -336,7 +322,7 @@ export async function markReturnAttention({ token, returnNumber, statusName, com
   }
 
   if (Object.keys(body).length === 0) {
-    return; // нечего обновлять
+    return;
   }
 
   const url = `${API}/entity/${found.entity}/${found.id}`;
@@ -349,5 +335,4 @@ export async function markReturnAttention({ token, returnNumber, statusName, com
     const text = await r.text();
     throw new Error(`МойСклад: обновление не удалось: ${r.status} ${text}`);
   }
-}
 }
