@@ -12,6 +12,7 @@ import {
   checkReturnByNumber,
   createReturn,
   updateReturnVideoField,
+  markReturnAttention,
 } from './lib/moysklad.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -67,10 +68,8 @@ app.get('/api/health', (req, res) => {
 app.post('/api/check-barcode', async (req, res) => {
   const barcode = (req.body && req.body.barcode || '').trim();
   console.log(`\n[${new Date().toISOString()}] Check barcode: ${barcode}`);
-
   if (!barcode) return res.status(400).json({ error: 'Не указан штрихкод' });
   if (!process.env.MOYSKLAD_TOKEN) return res.status(500).json({ error: 'Не настроен MOYSKLAD_TOKEN' });
-
   try {
     const result = await checkReturnByNumber({
       token: process.env.MOYSKLAD_TOKEN,
@@ -89,10 +88,8 @@ app.post('/api/check-barcode', async (req, res) => {
 app.post('/api/create-return', async (req, res) => {
   const barcode = (req.body && req.body.barcode || '').trim();
   console.log(`\n[${new Date().toISOString()}] Create return: ${barcode}`);
-
   if (!barcode) return res.status(400).json({ error: 'Не указан штрихкод' });
   if (!process.env.MOYSKLAD_TOKEN) return res.status(500).json({ error: 'Не настроен MOYSKLAD_TOKEN' });
-
   try {
     const check = await checkReturnByNumber({
       token: process.env.MOYSKLAD_TOKEN,
@@ -115,6 +112,32 @@ app.post('/api/create-return', async (req, res) => {
   }
 });
 
+// ---------- НОВЫЙ: пометка возврата как "Требует внимания" ----------
+app.post('/api/mark-attention', async (req, res) => {
+  const barcode = (req.body && req.body.barcode || '').trim();
+  const comment = (req.body && req.body.comment || '').trim();
+  console.log(`\n[${new Date().toISOString()}] Mark attention: ${barcode}`);
+  console.log(`  comment: "${comment}"`);
+
+  if (!barcode) return res.status(400).json({ error: 'Не указан штрихкод' });
+  if (!comment) return res.status(400).json({ error: 'Не указано описание проблемы' });
+  if (!process.env.MOYSKLAD_TOKEN) return res.status(500).json({ error: 'Не настроен MOYSKLAD_TOKEN' });
+
+  try {
+    await markReturnAttention({
+      token: process.env.MOYSKLAD_TOKEN,
+      returnNumber: barcode,
+      statusName: STATUS_ATTENTION,
+      comment,
+    });
+    console.log(`  ✓ статус → "${STATUS_ATTENTION}", комментарий добавлен`);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('  ✗', e.message);
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // ---------- Главный обработчик загрузки ----------
 async function handleUpload(req, res) {
   const startedAt = Date.now();
@@ -123,16 +146,11 @@ async function handleUpload(req, res) {
   const barcode = (req.body.barcode || '').trim();
   const filenameFromClient = (req.body.filename || '').trim();
   const user = (req.body.user || 'unknown').trim();
-  // Новые поля для статусов:
-  const attentionRaw = (req.body.attention || '').toString().trim().toLowerCase();
-  const attention = attentionRaw === 'true' || attentionRaw === '1' || attentionRaw === 'yes';
-  const comment = (req.body.comment || '').toString().trim();
 
   console.log(`\n[${new Date().toISOString()}] Upload start [${mode}]`);
   console.log(`  barcode: ${barcode}`);
   console.log(`  filename: ${filenameFromClient}`);
   console.log(`  user: ${user}`);
-  console.log(`  attention: ${attention}, comment: "${comment}"`);
   console.log(`  file: ${file?.originalname} (${file?.size} bytes, ${file?.mimetype})`);
 
   if (!file) return res.status(400).json({ success: false, error: 'Видео не получено' });
@@ -183,16 +201,14 @@ async function handleUpload(req, res) {
     if (mode === 'return' && process.env.MOYSKLAD_TOKEN) {
       try {
         console.log('  → МойСклад: updating return...');
-        const targetStatus = attention ? STATUS_ATTENTION : STATUS_UNPACKED;
         await updateReturnVideoField({
           token: process.env.MOYSKLAD_TOKEN,
           fieldName: FIELD_NAME,
           returnNumber: barcode,
           link,
-          statusName: targetStatus,
-          comment: attention ? comment : null,
+          statusName: STATUS_UNPACKED,
         });
-        console.log(`  ✓ МойСклад: updated → status "${targetStatus}"`);
+        console.log(`  ✓ МойСклад: updated → status "${STATUS_UNPACKED}"`);
       } catch (e) {
         console.error('  ✗ МойСклад error:', e.message);
         warning = `Видео загружено, но МойСклад не обновлён: ${e.message}`;
@@ -203,15 +219,7 @@ async function handleUpload(req, res) {
     const duration = Date.now() - startedAt;
     console.log(`  ✓ DONE in ${duration}ms\n`);
 
-    res.json({
-      success: true,
-      mode,
-      barcode,
-      link,
-      attention,
-      warning,
-      durationMs: duration,
-    });
+    res.json({ success: true, mode, barcode, link, warning, durationMs: duration });
   } catch (e) {
     console.error('  ✗ FATAL:', e);
     cleanup(file.path);
