@@ -78,22 +78,6 @@
             font-size: 18px; font-weight: 500; word-break: break-all;
         }
 
-        /* Переключатель режима в шапке */
-        .mode-pill {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            color: var(--text);
-            padding: 6px 12px;
-            border-radius: 100px;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-            cursor: pointer;
-        }
-        .mode-pill.return { border-color: rgba(255,107,53,0.4); color: var(--accent); }
-        .mode-pill.shipment { border-color: rgba(74,222,128,0.4); color: var(--success); }
-
         .pending-banner {
             background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(251, 191, 36, 0.05));
             border: 1px solid rgba(251, 191, 36, 0.4);
@@ -112,10 +96,7 @@
             padding: 10px 0; border-bottom: 1px solid var(--border);
         }
         .pending-list-item:last-child { border-bottom: none; }
-        .pending-list-code {
-            font-family: 'JetBrains Mono', monospace;
-            flex: 1; font-size: 13px;
-        }
+        .pending-list-code { font-family: 'JetBrains Mono', monospace; flex: 1; font-size: 13px; }
         .pending-list-time { font-size: 11px; color: var(--text-mute); font-family: 'JetBrains Mono', monospace; }
 
         #scanner-container {
@@ -161,8 +142,7 @@
             color: #000;
             padding: 6px 10px; border-radius: 100px;
             font-size: 11px; font-weight: 700;
-            opacity: 0;
-            transition: opacity 0.3s;
+            opacity: 0; transition: opacity 0.3s;
         }
         .save-badge.visible { opacity: 1; }
 
@@ -179,7 +159,7 @@
         .btn-primary { background: var(--accent); color: #000; box-shadow: 0 0 30px var(--accent-glow); }
         .btn-danger { background: var(--error); color: #fff; }
         .btn-secondary { background: var(--bg-card); color: var(--text); border: 1px solid var(--border); }
-        .btn-warning { background: var(--warning); color: #000; }
+        .btn-warning { background: var(--warning); color: #000; box-shadow: 0 0 30px rgba(251,191,36,0.2); }
         .btn-success { background: var(--success); color: #000; box-shadow: 0 0 30px rgba(74,222,128,0.2); }
         .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
@@ -201,6 +181,7 @@
 
         .done-screen { text-align: center; padding: 40px 20px; }
         .done-icon { width: 80px; height: 80px; border-radius: 50%; background: var(--success); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .done-icon.attention { background: var(--warning); }
         .warn-icon { width: 80px; height: 80px; border-radius: 50%; background: var(--warning); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
         .err-icon { width: 80px; height: 80px; border-radius: 50%; background: var(--error); display: flex; align-items: center; justify-content: center; margin: 0 auto 24px; animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
         @keyframes pop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
@@ -215,12 +196,27 @@
         }
         .editable-code:focus { outline: none; border-color: var(--accent); }
 
+        /* Текстовое поле для описания проблемы */
+        .attention-textarea {
+            font-family: 'Manrope', sans-serif;
+            font-size: 15px; width: 100%;
+            min-height: 120px;
+            padding: 14px 16px; background: var(--bg);
+            border: 2px solid rgba(251, 191, 36, 0.4); border-radius: 12px;
+            color: var(--text); margin-top: 8px;
+            resize: vertical;
+            line-height: 1.4;
+        }
+        .attention-textarea:focus { outline: none; border-color: var(--warning); }
+        .attention-textarea::placeholder { color: var(--text-mute); }
+
         .history { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--border); }
         .history-title { font-size: 11px; font-weight: 700; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-mute); margin-bottom: 12px; }
         .history-item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
         .history-item:last-child { border-bottom: none; }
         .history-status { width: 8px; height: 8px; border-radius: 50%; background: var(--success); flex-shrink: 0; }
         .history-status.error { background: var(--error); }
+        .history-status.attention { background: var(--warning); }
         .history-code { font-family: 'JetBrains Mono', monospace; flex: 1; color: var(--text); }
         .history-time { font-family: 'JetBrains Mono', monospace; color: var(--text-mute); font-size: 11px; }
 
@@ -235,35 +231,14 @@
         .form-input { width: 100%; padding: 14px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 14px; }
         .form-input:focus { outline: none; border-color: var(--accent); }
 
-        /* Радио-переключатель режимов */
-        .mode-radio-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-bottom: 8px;
-        }
-        .mode-radio {
-            position: relative;
-            cursor: pointer;
-        }
+        .mode-radio-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+        .mode-radio { position: relative; cursor: pointer; }
         .mode-radio input { position: absolute; opacity: 0; pointer-events: none; }
-        .mode-radio-card {
-            background: var(--bg);
-            border: 2px solid var(--border);
-            border-radius: 12px;
-            padding: 14px 12px;
-            text-align: center;
-            transition: all 0.15s ease;
-        }
-        .mode-radio input:checked + .mode-radio-card {
-            border-color: var(--accent);
-            background: rgba(255,107,53,0.06);
-        }
+        .mode-radio-card { background: var(--bg); border: 2px solid var(--border); border-radius: 12px; padding: 14px 12px; text-align: center; transition: all 0.15s ease; }
+        .mode-radio input:checked + .mode-radio-card { border-color: var(--accent); background: rgba(255,107,53,0.06); }
         .mode-radio-emoji { font-size: 22px; margin-bottom: 4px; line-height: 1; }
         .mode-radio-name { font-size: 13px; font-weight: 700; }
-        .mode-radio-disabled .mode-radio-card {
-            opacity: 0.4;
-        }
+        .mode-radio-disabled .mode-radio-card { opacity: 0.4; }
         .mode-radio-disabled .mode-radio-card::after {
             content: 'скоро';
             display: block;
@@ -282,24 +257,10 @@
         .check-loading { text-align: center; padding: 40px 20px; }
         .check-spinner { width: 60px; height: 60px; border: 4px solid var(--border); border-top-color: var(--accent); border-radius: 50%; margin: 0 auto 24px; animation: spin 0.8s linear infinite; }
 
-        /* Главный экран отгрузки */
-        .shipment-hero {
-            text-align: center;
-            padding: 20px 10px 40px;
-        }
+        .shipment-hero { text-align: center; padding: 20px 10px 40px; }
         .shipment-hero-emoji { font-size: 64px; margin-bottom: 16px; }
-        .shipment-hero-date {
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 14px;
-            color: var(--text-dim);
-            margin-bottom: 8px;
-        }
-        .shipment-hero-title {
-            font-size: 26px;
-            font-weight: 800;
-            margin-bottom: 32px;
-            letter-spacing: -0.02em;
-        }
+        .shipment-hero-date { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--text-dim); margin-bottom: 8px; }
+        .shipment-hero-title { font-size: 26px; font-weight: 800; margin-bottom: 32px; letter-spacing: -0.02em; }
     </style>
 </head>
 <body>
@@ -397,7 +358,9 @@
                 </div>
             </div>
 
-            <!-- ====== ОБЩИЕ ЭТАПЫ: ЗАПИСЬ / ЗАГРУЗКА / ГОТОВО ====== -->
+            <!-- ====== ОБЩИЕ ЭТАПЫ ====== -->
+
+            <!-- Этап: запись -->
             <div id="stage-record" class="hidden">
                 <div class="stage-label" id="record-step-label">Шаг 2 из 3</div>
                 <div class="stage-title" id="record-title">Запись распаковки</div>
@@ -414,11 +377,41 @@
                     <div class="save-badge" id="save-badge">💾 Сохранено</div>
                 </div>
                 <button class="btn btn-primary" id="btn-record" onclick="toggleRecording()">🎥 Начать запись</button>
+                <div style="margin-top: 10px;">
+                    <button class="btn btn-warning hidden" id="btn-attention" onclick="goToAttentionForm()">⚠ Внимание!</button>
+                </div>
                 <div style="margin-top: 12px;">
                     <button class="btn btn-secondary" onclick="cancelAndGoHome()">← Назад</button>
                 </div>
             </div>
 
+            <!-- Этап: ввод описания проблемы (только режим возврата) -->
+            <div id="stage-attention" class="hidden">
+                <div class="warn-icon">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="9" x2="12" y2="13"></line>
+                        <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path>
+                    </svg>
+                </div>
+                <div class="done-title" style="text-align:center;">Опишите проблему</div>
+                <div class="done-subtitle" style="text-align:center;">Текст попадёт в комментарий возврата в МойСклад. Статус возврата будет «Требует внимания».</div>
+                <div class="card">
+                    <div class="card-label">Номер возврата</div>
+                    <div class="card-value" id="attention-barcode">—</div>
+                </div>
+                <div class="card">
+                    <div class="card-label">Описание проблемы</div>
+                    <textarea class="attention-textarea" id="attention-text" placeholder="Например: повреждена упаковка, не хватает товара, видны следы использования..."></textarea>
+                </div>
+                <button class="btn btn-warning" id="btn-attention-submit" onclick="submitWithAttention()">
+                    Отправить с пометкой
+                </button>
+                <div style="height: 10px;"></div>
+                <button class="btn btn-secondary" onclick="goBackFromAttention()">← Назад к записи</button>
+            </div>
+
+            <!-- Этап: загрузка -->
             <div id="stage-upload" class="hidden">
                 <div class="stage-label" id="upload-step-label">Шаг 3 из 3</div>
                 <div class="stage-title">Загрузка и сохранение</div>
@@ -441,9 +434,10 @@
                 <div id="upload-msgs" style="margin-top: 20px;"></div>
             </div>
 
+            <!-- Этап: готово -->
             <div id="stage-done" class="hidden">
                 <div class="done-screen">
-                    <div class="done-icon">
+                    <div class="done-icon" id="done-icon-circle">
                         <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                             <polyline points="20 6 9 17 4 12"></polyline>
                         </svg>
@@ -583,9 +577,8 @@
         // ============================================================
         const state = {
             mode: localStorage.getItem('app_mode') || 'return',
-            // Идентификатор текущей записи: для возврата = barcode; для отгрузки = "Отгрузка_DD_MM_YYYY"
             recordKey: null,
-            barcode: null, // используется только в режиме возврата
+            barcode: null,
             videoBlob: null,
             stream: null,
             recorder: null,
@@ -595,6 +588,9 @@
             recTimer: null,
             scanner: null,
             currentFilename: null,
+            // Поля для "Внимание!"
+            attention: false,
+            attentionComment: '',
             backendUrl: localStorage.getItem('backendUrl') || '',
             apiKey: localStorage.getItem('apiKey') || '',
             history: JSON.parse(localStorage.getItem('history') || '[]'),
@@ -609,7 +605,7 @@
         }
 
         // ============================================================
-        // РЕЖИМ — переключение интерфейса
+        // РЕЖИМ
         // ============================================================
         function applyMode(mode) {
             state.mode = mode;
@@ -622,7 +618,6 @@
             document.getElementById('mode-shipment').classList.toggle('hidden', !isShipment);
             document.getElementById('header-mode').textContent = isReturn ? 'ВОЗВРАТЫ' : 'ОТГРУЗКА';
 
-            // Лейблы на общих этапах
             if (isReturn) {
                 document.getElementById('record-step-label').textContent = 'Шаг 2 из 3';
                 document.getElementById('record-title').textContent = 'Запись распаковки';
@@ -641,20 +636,18 @@
                 document.getElementById('done-title').textContent = 'Отгрузка обработана';
                 document.getElementById('history-section-title').textContent = 'Сегодня записано';
                 document.getElementById('done-next-btn').textContent = 'Записать ещё →';
-                // Дата для главной отгрузки
                 document.getElementById('shipment-date').textContent = formatShipmentDate().replace(/_/g, '.');
             }
         }
 
         function showStage(stage) {
-            ['scan','check','notfound','already','shipment-home','record','upload','done'].forEach(s => {
+            ['scan','check','notfound','already','shipment-home','record','attention','upload','done'].forEach(s => {
                 const el = document.getElementById('stage-' + s);
                 if (el) el.classList.add('hidden');
             });
             const el = document.getElementById('stage-' + stage);
             if (el) el.classList.remove('hidden');
 
-            // Шаги-индикатор только для режима возврата
             if (state.mode === 'return') {
                 const steps = ['step-1', 'step-2', 'step-3'];
                 steps.forEach(s => {
@@ -663,7 +656,7 @@
                 });
                 if (['scan','check','notfound','already'].includes(stage)) {
                     document.getElementById('step-1').classList.add('active');
-                } else if (stage === 'record') {
+                } else if (stage === 'record' || stage === 'attention') {
                     document.getElementById('step-1').classList.add('done');
                     document.getElementById('step-2').classList.add('active');
                 } else if (stage === 'upload') {
@@ -687,7 +680,7 @@
         }
 
         // ============================================================
-        // СКАНИРОВАНИЕ (только режим возврата)
+        // СКАНИРОВАНИЕ
         // ============================================================
         function startScanner() {
             if (state.mode !== 'return') return;
@@ -697,10 +690,8 @@
             }
             const reader = document.getElementById('qr-reader');
             if (!reader) return;
-            // Гарантируем, что контейнер виден и имеет размеры
             const container = document.getElementById('scanner-container');
             if (!container || container.offsetWidth === 0) {
-                // Если контейнер ещё не отрендерился — пробуем чуть позже
                 setTimeout(startScanner, 200);
                 return;
             }
@@ -736,7 +727,6 @@
             ).catch(err => {
                 console.error('Scanner start error:', err);
                 state.scanner = null;
-                // На iOS первый запуск может потребовать ещё одной попытки
                 setTimeout(() => {
                     if (!state.scanner && state.mode === 'return') startScanner();
                 }, 600);
@@ -777,7 +767,7 @@
         }
 
         // ============================================================
-        // ПРОВЕРКА В МОЙСКЛАД (режим возврата)
+        // ПРОВЕРКА В МОЙСКЛАД
         // ============================================================
         async function checkBarcodeOnServer() {
             showStage('check');
@@ -863,21 +853,23 @@
         }
 
         // ============================================================
-        // ЗАПИСЬ ВИДЕО (общая для обоих режимов)
+        // ЗАПИСЬ ВИДЕО
         // ============================================================
         async function startReturnRecording() {
-            // Возврат: ключ записи = ШК; имя файла = ШК.mp4
             state.recordKey = state.barcode;
-            state.currentFilename = null; // сформируется при загрузке
+            state.currentFilename = null;
+            state.attention = false;
+            state.attentionComment = '';
             await openCameraForRecording('Номер возврата', state.barcode);
         }
 
         async function startShipmentRecording() {
-            // Отгрузка: ключ = "Отгрузка_DD_MM_YYYY"; имя файла такое же + .mp4
             const dateStr = formatShipmentDate();
             state.recordKey = `Отгрузка_${dateStr}`;
             state.barcode = null;
             state.currentFilename = null;
+            state.attention = false;
+            state.attentionComment = '';
             await openCameraForRecording('Дата отгрузки', dateStr.replace(/_/g, '.'));
         }
 
@@ -885,9 +877,15 @@
             showStage('record');
             document.getElementById('record-info-label').textContent = displayLabel;
             document.getElementById('display-barcode').textContent = displayValue;
+
             const btn = document.getElementById('btn-record');
             btn.className = 'btn btn-primary';
             btn.innerHTML = '🎥 Начать запись';
+
+            // Кнопка "Внимание!" — только в режиме возврата
+            const attentionBtn = document.getElementById('btn-attention');
+            attentionBtn.classList.toggle('hidden', state.mode !== 'return');
+
             document.getElementById('rec-ind').classList.add('hidden');
             document.getElementById('save-badge').classList.remove('visible');
 
@@ -933,7 +931,16 @@
                 state.videoBlob = new Blob(state.chunks, { type: state.recorder.mimeType });
                 state.videoBlob.fileExtension = ext;
                 await saveChunksToDB(true);
-                uploadVideo();
+                // После остановки записи — либо сразу загружаем (по обычной кнопке),
+                // либо ждём, что пользователь уже нажал "Внимание!" перед остановкой
+                if (state.attention) {
+                    // Кладовщик нажал "Внимание!" во время записи — ушли на ввод текста
+                    showStage('attention');
+                    document.getElementById('attention-barcode').textContent = state.barcode;
+                    document.getElementById('attention-text').value = state.attentionComment || '';
+                } else {
+                    uploadVideo();
+                }
             };
             state.recorder.start(1000);
             state.recording = true;
@@ -961,6 +968,8 @@
                     ext: ext,
                     savedAt: Date.now(),
                     finalized: isFinal,
+                    attention: state.attention,
+                    attentionComment: state.attentionComment,
                 });
                 const badge = document.getElementById('save-badge');
                 badge.classList.add('visible');
@@ -990,12 +999,65 @@
             }
         }
 
+        // Кнопка "Внимание!" на экране записи
+        function goToAttentionForm() {
+            // Помечаем что отмечено внимание
+            state.attention = true;
+            // Если идёт запись — останавливаем, дальше ondataavailable + onstop отведут на форму
+            if (state.recording) {
+                stopRecord();
+                return;
+            }
+            // Если запись не начиналась (кладовщик сразу нажал "Внимание!") —
+            // нет смысла; всё равно нужно сначала записать видео
+            if (!state.videoBlob) {
+                alert('Сначала запишите видео — затем нажмите "Внимание!" чтобы добавить описание проблемы.');
+                state.attention = false;
+                return;
+            }
+            // Если запись была завершена ранее — переходим к форме
+            showStage('attention');
+            document.getElementById('attention-barcode').textContent = state.barcode;
+            document.getElementById('attention-text').value = state.attentionComment || '';
+        }
+
+        function goBackFromAttention() {
+            // Возврат к экрану записи — если видео уже записано, кладовщик может
+            // нажать "Загрузить" обычной кнопкой, тогда снимем флаг attention
+            state.attention = false;
+            state.attentionComment = document.getElementById('attention-text').value;
+            showStage('record');
+            // Включаем кнопку обычной отправки
+            const btn = document.getElementById('btn-record');
+            btn.className = 'btn btn-success';
+            btn.innerHTML = '✓ Всё в порядке — отправить';
+            btn.onclick = () => {
+                state.attention = false;
+                state.attentionComment = '';
+                btn.onclick = toggleRecording;
+                uploadVideo();
+            };
+        }
+
+        function submitWithAttention() {
+            const text = document.getElementById('attention-text').value.trim();
+            if (!text) {
+                alert('Опишите проблему — это поле обязательно');
+                return;
+            }
+            state.attention = true;
+            state.attentionComment = text;
+            uploadVideo();
+        }
+
         async function cancelAndScan() {
             if (state.stream) { state.stream.getTracks().forEach(t => t.stop()); state.stream = null; }
             await stopScanner();
             state.barcode = null;
             state.recordKey = null;
             state.videoBlob = null;
+            state.attention = false;
+            state.attentionComment = '';
             showStage('scan');
             await new Promise(r => setTimeout(r, 200));
             startScanner();
@@ -1008,6 +1070,8 @@
             state.barcode = null;
             state.recordKey = null;
             state.videoBlob = null;
+            state.attention = false;
+            state.attentionComment = '';
             await new Promise(r => setTimeout(r, 200));
             goHome();
             renderPendingBanner();
@@ -1020,9 +1084,8 @@
             showStage('upload');
             const ext = state.videoBlob.fileExtension || 'mp4';
 
-            // Имя файла зависит от режима
             const filename = state.mode === 'shipment'
-                ? `${state.recordKey}.${ext}` // "Отгрузка_28_04_2026.mp4"
+                ? `${state.recordKey}.${ext}`
                 : `${state.barcode}.${ext}`;
 
             state.currentFilename = filename;
@@ -1044,6 +1107,8 @@
             formData.append('mode', state.mode);
             formData.append('barcode', state.barcode || '');
             formData.append('filename', filename);
+            formData.append('attention', state.attention ? 'true' : 'false');
+            formData.append('comment', state.attentionComment || '');
             formData.append('video', state.videoBlob, filename);
 
             try {
@@ -1051,12 +1116,12 @@
                 await uploadWithProgress(formData);
                 updateProgress(100, 'Готово');
                 await dbDelete(state.recordKey);
-                addToHistory(state.recordKey, state.mode, true);
+                addToHistory(state.recordKey, state.mode, true, state.attention);
                 showDone();
                 renderPendingBanner();
             } catch (err) {
                 showUploadError(err.message || String(err));
-                addToHistory(state.recordKey, state.mode, false);
+                addToHistory(state.recordKey, state.mode, false, state.attention);
             }
         }
 
@@ -1119,6 +1184,21 @@
                 ? state.recordKey.replace('Отгрузка_', '').replace(/_/g, '.')
                 : state.barcode;
             document.getElementById('done-barcode').textContent = subtitle;
+
+            // Меняем заголовок и иконку в зависимости от того, было ли "Внимание!"
+            const doneIcon = document.getElementById('done-icon-circle');
+            const doneTitle = document.getElementById('done-title');
+            if (state.attention) {
+                doneIcon.classList.add('attention');
+                doneTitle.textContent = 'Возврат отмечен — требует внимания';
+            } else {
+                doneIcon.classList.remove('attention');
+                if (state.mode === 'return') {
+                    doneTitle.textContent = 'Возврат обработан';
+                } else {
+                    doneTitle.textContent = 'Отгрузка обработана';
+                }
+            }
         }
 
         async function resetAndGoHome() {
@@ -1127,19 +1207,24 @@
             state.recordKey = null;
             state.videoBlob = null;
             state.chunks = [];
+            state.attention = false;
+            state.attentionComment = '';
             updateProgress(0, 'Подготовка...');
             document.getElementById('upload-msgs').innerHTML = '';
             const btn = document.getElementById('btn-record');
             btn.className = 'btn btn-primary';
             btn.innerHTML = '🎥 Начать запись';
+            btn.onclick = toggleRecording;
             document.getElementById('rec-ind').classList.add('hidden');
+            // Сбрасываем иконку "готово"
+            document.getElementById('done-icon-circle').classList.remove('attention');
             await new Promise(r => setTimeout(r, 200));
             goHome();
             renderPendingBanner();
         }
 
         // ============================================================
-        // БАННЕР И ПОВТОР НЕСИНХРОНИЗИРОВАННЫХ
+        // БАННЕР НЕСИНХРОНИЗИРОВАННЫХ
         // ============================================================
         async function renderPendingBanner() {
             const banner = document.getElementById('pending-banner');
@@ -1220,13 +1305,14 @@
         }
 
         function retryPending(record) {
-            // Восстанавливаем состояние из записи и сразу запускаем загрузку
             state.mode = record.mode || 'return';
             applyMode(state.mode);
             state.recordKey = record.key;
             state.barcode = record.barcode || (record.mode === 'return' ? record.key : null);
             state.videoBlob = record.blob;
             state.videoBlob.fileExtension = record.ext || 'mp4';
+            state.attention = !!record.attention;
+            state.attentionComment = record.attentionComment || '';
             uploadVideo();
         }
 
@@ -1244,8 +1330,8 @@
         // ============================================================
         // ИСТОРИЯ
         // ============================================================
-        function addToHistory(key, mode, success) {
-            const item = { key, mode, success, time: new Date().toISOString() };
+        function addToHistory(key, mode, success, attention) {
+            const item = { key, mode, success, attention: !!attention, time: new Date().toISOString() };
             state.history.unshift(item);
             state.history = state.history.slice(0, 30);
             localStorage.setItem('history', JSON.stringify(state.history));
@@ -1255,7 +1341,6 @@
         function renderHistory() {
             const list = document.getElementById('history-list');
             const today = new Date().toDateString();
-            // Показываем только записи текущего режима
             const todayItems = state.history.filter(i =>
                 new Date(i.time).toDateString() === today &&
                 (i.mode || 'return') === state.mode
@@ -1270,9 +1355,13 @@
                 const display = (i.mode === 'shipment')
                     ? String(i.key).replace('Отгрузка_', '').replace(/_/g, '.')
                     : i.key;
+                let cssClass = 'success';
+                if (!i.success) cssClass = 'error';
+                else if (i.attention) cssClass = 'attention';
+                const dotClass = !i.success ? 'error' : (i.attention ? 'attention' : '');
                 return `
                     <div class="history-item">
-                        <div class="history-status ${i.success ? '' : 'error'}"></div>
+                        <div class="history-status ${dotClass}"></div>
                         <div class="history-code">${escapeHtml(display)}</div>
                         <div class="history-time">${time}</div>
                     </div>`;
@@ -1288,7 +1377,6 @@
             if (panel.classList.contains('open')) {
                 document.getElementById('backend-url').value = state.backendUrl;
                 document.getElementById('api-key').value = state.apiKey;
-                // Отметить активный режим в радио-переключателе
                 document.querySelectorAll('input[name="mode"]').forEach(r => {
                     r.checked = (r.value === state.mode);
                 });
@@ -1328,7 +1416,7 @@
         window.addEventListener('offline', updateNetStatus);
 
         // ============================================================
-        // ИНИЦИАЛИЗАЦИЯ — надёжный старт камеры
+        // ИНИЦИАЛИЗАЦИЯ
         // ============================================================
         async function bootstrap() {
             updateNetStatus();
@@ -1341,7 +1429,6 @@
                 return;
             }
 
-            // Ждём пока DOM устаканится — два кадра анимации
             await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
             goHome();
         }
