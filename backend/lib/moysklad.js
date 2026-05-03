@@ -1,13 +1,16 @@
-// МойСклад: проверка/создание возврата + обновление поля "Видео"
+// МойСклад: проверка/создание возврата + обновление поля "Видео" + статусы + комментарии
 
 const API = 'https://api.moysklad.ru/api/remap/1.2';
 
 const POSSIBLE_ENTITIES = ['salesreturn', 'customerreturn', 'purchasereturn'];
 
-// Параметры для автосоздания нового возврата (если по ШК не найден)
 const DEFAULT_ORGANIZATION = 'alpatoffltd';
 const DEFAULT_STORE = 'ООО "АЛПАТОФФ" Возвраты';
 const DEFAULT_AGENT = 'Розничный покупатель';
+
+const STATUS_NEW = 'Новый';
+const STATUS_UNPACKED = 'Распакован';
+const STATUS_ATTENTION = 'Требует внимания';
 
 function authHeaders(token) {
   return {
@@ -19,6 +22,7 @@ function authHeaders(token) {
 }
 
 let cachedEntity = null;
+let cachedStatuses = null; // map: name → state object
 
 function normalizeAttributes(input) {
   if (Array.isArray(input)) return input;
@@ -26,7 +30,6 @@ function normalizeAttributes(input) {
   return [];
 }
 
-// Поиск документа по номеру в одной из возможных сущностей
 async function findReturnIdByNumber(token, returnNumber) {
   if (cachedEntity) {
     const url = `${API}/entity/${cachedEntity}?filter=name=${encodeURIComponent(returnNumber)}&limit=1`;
@@ -50,10 +53,9 @@ async function findReturnIdByNumber(token, returnNumber) {
       }
     } catch {}
   }
-  return null; // не найден
+  return null;
 }
 
-// Определить рабочую сущность (из любого пустого поиска — нам нужна сущность для создания)
 async function detectEntity(token) {
   if (cachedEntity) return cachedEntity;
   for (const name of POSSIBLE_ENTITIES) {
@@ -78,7 +80,6 @@ async function fetchFullDoc(token, entity, id) {
   return r.json();
 }
 
-// Берём metadata атрибута поля по имени
 async function getFieldMeta(token, entity, fieldName) {
   const r = await fetch(`${API}/entity/${entity}/metadata/attributes`, { headers: authHeaders(token) });
   if (!r.ok) {
@@ -94,7 +95,6 @@ async function getFieldMeta(token, entity, fieldName) {
   return fieldMeta;
 }
 
-// Поиск справочника по имени (организация, склад, контрагент)
 async function findRefByName(token, endpoint, name) {
   const url = `${API}/entity/${endpoint}?filter=name=${encodeURIComponent(name)}&limit=1`;
   const r = await fetch(url, { headers: authHeaders(token) });
@@ -110,15 +110,34 @@ async function findRefByName(token, endpoint, name) {
   return rows[0];
 }
 
+// Загружаем все статусы сущности (один раз кешируем)
+async function loadStatuses(token, entity) {
+  if (cachedStatuses) return cachedStatuses;
+  const r = await fetch(`${API}/entity/${entity}/metadata`, { headers: authHeaders(token) });
+  if (!r.ok) {
+    const text = await r.text();
+    throw new Error(`МойСклад: не удалось получить metadata: ${r.status} ${text}`);
+  }
+  const data = await r.json();
+  const states = Array.isArray(data.states) ? data.states : [];
+  const map = {};
+  for (const s of states) map[s.name] = s;
+  cachedStatuses = map;
+  console.log(`  МойСклад: загружено статусов: ${Object.keys(map).length} [${Object.keys(map).join(', ')}]`);
+  return map;
+}
+
+async function getStatusMeta(token, entity, statusName) {
+  const map = await loadStatuses(token, entity);
+  const status = map[statusName];
+  if (!status) {
+    throw new Error(`МойСклад: статус "${statusName}" не найден. Доступные: ${Object.keys(map).join(', ')}`);
+  }
+  return status;
+}
+
 // =============== ПУБЛИЧНЫЕ ФУНКЦИИ ===============
 
-/**
- * Проверка возврата по номеру.
- * Возвращает один из вариантов:
- *   { status: 'not_found' }
- *   { status: 'has_video', videoUrl }
- *   { status: 'ready', entity, id }
- */
 export async function checkReturnByNumber({ token, fieldName, returnNumber }) {
   if (!token) throw new Error('Не указан MOYSKLAD_TOKEN');
 
@@ -137,20 +156,27 @@ export async function checkReturnByNumber({ token, fieldName, returnNumber }) {
 }
 
 /**
- * Создаёт новый возврат покупателя в МойСклад с указанным номером.
- * Возвращает { entity, id }.
+ * Создаёт новый возврат. Сразу ставит статус "Новый".
  */
 export async function createReturn({ token, returnNumber }) {
   if (!token) throw new Error('Не указан MOYSKLAD_TOKEN');
 
   const entity = await detectEntity(token);
 
-  // Подгружаем справочники (один раз — могли бы кешировать, но запросы быстрые)
   const [organization, store, agent] = await Promise.all([
     findRefByName(token, 'organization', DEFAULT_ORGANIZATION),
     findRefByName(token, 'store', DEFAULT_STORE),
     findRefByName(token, 'counterparty', DEFAULT_AGENT),
   ]);
+
+  // Пробуем найти статус "Новый" — если его нет, создадим документ без статуса
+  let stateBlock = null;
+  try {
+    const statusMeta = await getStatusMeta(token, entity, STATUS_NEW);
+    stateBlock = { meta: statusMeta.meta };
+  } catch (e) {
+    console.warn(`  МойСклад: ${e.message} — создаём возврат без статуса`);
+  }
 
   const body = {
     name: returnNumber,
@@ -158,6 +184,7 @@ export async function createReturn({ token, returnNumber }) {
     store: { meta: store.meta },
     agent: { meta: agent.meta },
   };
+  if (stateBlock) body.state = stateBlock;
 
   const r = await fetch(`${API}/entity/${entity}`, {
     method: 'POST',
@@ -173,10 +200,22 @@ export async function createReturn({ token, returnNumber }) {
 }
 
 /**
- * Записывает ссылку на видео в поле fieldName указанного возврата.
- * Если возврата нет — пробрасывает ошибку (вызывающая сторона должна была его создать).
+ * Записывает ссылку на видео + опционально меняет статус и/или добавляет комментарий.
+ * @param {string} statusName — имя статуса для установки (например, "Распакован" или "Требует внимания").
+ *                              Если не указано — статус не меняется.
+ * @param {string} comment    — текст для добавления в поле "Комментарий" документа.
+ *                              Если не указан — комментарий не меняется.
  */
-export async function updateReturnVideoField({ token, fieldName, returnNumber, link, knownEntity, knownId }) {
+export async function updateReturnVideoField({
+  token,
+  fieldName,
+  returnNumber,
+  link,
+  statusName,
+  comment,
+  knownEntity,
+  knownId,
+}) {
   if (!token) throw new Error('Не указан MOYSKLAD_TOKEN');
 
   let entity = knownEntity;
@@ -223,11 +262,40 @@ export async function updateReturnVideoField({ token, fieldName, returnNumber, l
   }
   if (!replaced) updatedAttrs.push(attrPayload);
 
+  // Собираем тело PUT-запроса
+  const body = { attributes: updatedAttrs };
+
+  // Если просили — обновляем статус
+  if (statusName) {
+    try {
+      const statusMeta = await getStatusMeta(token, entity, statusName);
+      body.state = { meta: statusMeta.meta };
+      console.log(`  МойСклад: статус будет изменён на "${statusName}"`);
+    } catch (e) {
+      console.warn(`  МойСклад: не удалось установить статус "${statusName}": ${e.message}`);
+      // Не падаем — главное чтобы видео сохранилось
+    }
+  }
+
+  // Если просили — добавляем комментарий
+  if (comment && comment.trim()) {
+    const existingComment = doc.description || '';
+    const stamp = new Date().toLocaleString('ru-RU', {
+      day: '2-digit', month: '2-digit', year: 'numeric',
+      hour: '2-digit', minute: '2-digit',
+    });
+    const newLine = `[${stamp}] ${comment.trim()}`;
+    body.description = existingComment
+      ? `${existingComment}\n${newLine}`
+      : newLine;
+    console.log(`  МойСклад: добавляется комментарий: ${newLine}`);
+  }
+
   const url = `${API}/entity/${entity}/${id}`;
   const r = await fetch(url, {
     method: 'PUT',
     headers: authHeaders(token),
-    body: JSON.stringify({ attributes: updatedAttrs }),
+    body: JSON.stringify(body),
   });
   if (!r.ok) {
     const text = await r.text();
