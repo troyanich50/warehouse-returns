@@ -19,6 +19,14 @@ function authHeaders(token) {
   };
 }
 
+function moscowTimestamp() {
+  return new Date().toLocaleString('ru-RU', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+    hour: '2-digit', minute: '2-digit',
+    timeZone: 'Europe/Moscow',
+  });
+}
+
 let cachedEntity = null;
 let cachedStatuses = null;
 
@@ -152,9 +160,6 @@ export async function checkReturnByNumber({ token, fieldName, returnNumber }) {
   return { status: 'ready', entity: found.entity, id: found.id };
 }
 
-/**
- * Создаёт новый возврат. Сразу ставит статус "Новый".
- */
 export async function createReturn({ token, returnNumber }) {
   if (!token) throw new Error('Не указан MOYSKLAD_TOKEN');
 
@@ -195,9 +200,6 @@ export async function createReturn({ token, returnNumber }) {
   return { entity, id: created.id };
 }
 
-/**
- * Записывает ссылку на видео + опционально меняет статус и/или добавляет комментарий.
- */
 export async function updateReturnVideoField({
   token,
   fieldName,
@@ -268,11 +270,7 @@ export async function updateReturnVideoField({
 
   if (comment && comment.trim()) {
     const existingComment = doc.description || '';
-    const stamp = new Date().toLocaleString('ru-RU', {
-      day: '2-digit', month: '2-digit', year: 'numeric',
-      hour: '2-digit', minute: '2-digit',
-    });
-    const newLine = `[${stamp}] ${comment.trim()}`;
+    const newLine = `[${moscowTimestamp()}] ${comment.trim()}`;
     body.description = existingComment ? `${existingComment}\n${newLine}` : newLine;
     console.log(`  МойСклад: добавляется комментарий`);
   }
@@ -289,10 +287,6 @@ export async function updateReturnVideoField({
   }
 }
 
-/**
- * Помечает уже существующий возврат как "Требует внимания" и добавляет комментарий.
- * Видео не трогается — оно к этому моменту уже загружено.
- */
 export async function markReturnAttention({ token, returnNumber, statusName, comment }) {
   if (!token) throw new Error('Не указан MOYSKLAD_TOKEN');
 
@@ -313,11 +307,7 @@ export async function markReturnAttention({ token, returnNumber, statusName, com
 
   if (comment && comment.trim()) {
     const existingComment = doc.description || '';
-    const stamp = new Date().toLocaleString('ru-RU', {
-      day: '2-digit', month: '2-digit', year: 'numeric',
-      hour: '2-digit', minute: '2-digit',
-    });
-    const newLine = `[${stamp}] ${comment.trim()}`;
+    const newLine = `[${moscowTimestamp()}] ${comment.trim()}`;
     body.description = existingComment ? `${existingComment}\n${newLine}` : newLine;
   }
 
