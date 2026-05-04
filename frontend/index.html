@@ -275,7 +275,6 @@
 
             <div id="pending-banner" class="hidden"></div>
 
-            <!-- ====== РЕЖИМ ВОЗВРАТЫ ====== -->
             <div id="mode-return">
                 <div class="steps">
                     <div class="step" id="step-1"></div>
@@ -345,7 +344,6 @@
                 </div>
             </div>
 
-            <!-- ====== РЕЖИМ ОТГРУЗКА ====== -->
             <div id="mode-shipment" class="hidden">
                 <div id="stage-shipment-home">
                     <div class="shipment-hero">
@@ -356,8 +354,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- ====== ОБЩИЕ ЭТАПЫ ====== -->
 
             <div id="stage-record" class="hidden">
                 <div class="stage-label" id="record-step-label">Шаг 2 из 3</div>
@@ -402,7 +398,6 @@
                 <div id="upload-msgs" style="margin-top: 20px;"></div>
             </div>
 
-            <!-- ГОТОВО — теперь две кнопки в режиме возврата -->
             <div id="stage-done" class="hidden">
                 <div class="done-screen">
                     <div class="done-icon" id="done-icon-circle">
@@ -419,7 +414,6 @@
                 </div>
             </div>
 
-            <!-- Этап ввода описания проблемы -->
             <div id="stage-attention" class="hidden">
                 <div class="warn-icon">
                     <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
@@ -445,7 +439,6 @@
                 <button class="btn btn-secondary" onclick="goBackFromAttention()">← Отмена</button>
             </div>
 
-            <!-- Финальный экран после "Внимание!" -->
             <div id="stage-attention-done" class="hidden">
                 <div class="done-screen">
                     <div class="done-icon attention">
@@ -521,9 +514,6 @@
     </div>
 
     <script>
-        // ============================================================
-        // INDEXEDDB
-        // ============================================================
         const DB_NAME = 'warehouse-returns';
         const DB_VERSION = 1;
         const STORE = 'pending';
@@ -585,9 +575,6 @@
             });
         }
 
-        // ============================================================
-        // СОСТОЯНИЕ
-        // ============================================================
         const state = {
             mode: localStorage.getItem('app_mode') || 'return',
             recordKey: null,
@@ -601,7 +588,6 @@
             recTimer: null,
             scanner: null,
             currentFilename: null,
-            // Последний обработанный возврат (для возможной пометки "Внимание!")
             lastBarcode: null,
             backendUrl: localStorage.getItem('backendUrl') || '',
             apiKey: localStorage.getItem('apiKey') || '',
@@ -616,9 +602,6 @@
             return `${dd}_${mm}_${yyyy}`;
         }
 
-        // ============================================================
-        // РЕЖИМ
-        // ============================================================
         function applyMode(mode) {
             state.mode = mode;
             localStorage.setItem('app_mode', mode);
@@ -691,9 +674,7 @@
             }
         }
 
-        // ============================================================
-        // СКАНИРОВАНИЕ
-        // ============================================================
+        let scannerStartAttempts = 0;
         function startScanner() {
             if (state.mode !== 'return') return;
             if (state.scanner) {
@@ -702,11 +683,20 @@
             }
             const reader = document.getElementById('qr-reader');
             if (!reader) return;
+
+            const stageScan = document.getElementById('stage-scan');
             const container = document.getElementById('scanner-container');
-            if (!container || container.offsetWidth === 0) {
-                setTimeout(startScanner, 200);
+            const isVisible = stageScan && !stageScan.classList.contains('hidden');
+            const hasSize = container && container.offsetWidth > 0 && container.offsetHeight > 0;
+
+            if (!isVisible || !hasSize) {
+                if (scannerStartAttempts < 10) {
+                    scannerStartAttempts++;
+                    setTimeout(startScanner, 300);
+                }
                 return;
             }
+            scannerStartAttempts = 0;
 
             state.scanner = new Html5Qrcode("qr-reader");
             const config = {
@@ -739,9 +729,12 @@
             ).catch(err => {
                 console.error('Scanner start error:', err);
                 state.scanner = null;
-                setTimeout(() => {
-                    if (!state.scanner && state.mode === 'return') startScanner();
-                }, 600);
+                if (scannerStartAttempts < 8) {
+                    scannerStartAttempts++;
+                    setTimeout(() => {
+                        if (!state.scanner && state.mode === 'return') startScanner();
+                    }, 500);
+                }
             });
         }
 
@@ -765,6 +758,7 @@
 
         async function restartScanner() {
             await stopScanner();
+            scannerStartAttempts = 0;
             await new Promise(r => setTimeout(r, 200));
             startScanner();
         }
@@ -778,9 +772,6 @@
             }
         }
 
-        // ============================================================
-        // ПРОВЕРКА В МОЙСКЛАД
-        // ============================================================
         async function checkBarcodeOnServer() {
             showStage('check');
             document.getElementById('check-barcode').textContent = state.barcode;
@@ -864,9 +855,6 @@
             }
         }
 
-        // ============================================================
-        // ЗАПИСЬ ВИДЕО
-        // ============================================================
         async function startReturnRecording() {
             state.recordKey = state.barcode;
             state.currentFilename = null;
@@ -996,6 +984,7 @@
             state.barcode = null;
             state.recordKey = null;
             state.videoBlob = null;
+            scannerStartAttempts = 0;
             showStage('scan');
             await new Promise(r => setTimeout(r, 200));
             startScanner();
@@ -1008,14 +997,12 @@
             state.barcode = null;
             state.recordKey = null;
             state.videoBlob = null;
+            scannerStartAttempts = 0;
             await new Promise(r => setTimeout(r, 200));
             goHome();
             renderPendingBanner();
         }
 
-        // ============================================================
-        // ЗАГРУЗКА
-        // ============================================================
         async function uploadVideo() {
             showStage('upload');
             const ext = state.videoBlob.fileExtension || 'mp4';
@@ -1049,7 +1036,6 @@
                 updateProgress(100, 'Готово');
                 await dbDelete(state.recordKey);
                 addToHistory(state.recordKey, state.mode, true, false);
-                // Запоминаем последний обработанный номер для возможного "Внимание!"
                 state.lastBarcode = state.barcode;
                 showDone();
                 renderPendingBanner();
@@ -1118,18 +1104,13 @@
                 ? state.recordKey.replace('Отгрузка_', '').replace(/_/g, '.')
                 : state.barcode;
             document.getElementById('done-barcode').textContent = subtitle;
-            // Сбрасываем стиль иконки на стандартный (зелёный)
             document.getElementById('done-icon-circle').classList.remove('attention');
             document.getElementById('done-title').textContent =
                 state.mode === 'return' ? 'Возврат обработан' : 'Отгрузка обработана';
-            // Кнопка "Сообщить о проблеме" — только в режиме возврата
             const attentionBlock = document.getElementById('done-attention-block');
             attentionBlock.classList.toggle('hidden', state.mode !== 'return');
         }
 
-        // ============================================================
-        // КНОПКА "ВНИМАНИЕ!" — только после успешной загрузки
-        // ============================================================
         function goToAttentionForm() {
             if (!state.lastBarcode) {
                 alert('Нет последнего обработанного возврата');
@@ -1138,7 +1119,6 @@
             showStage('attention');
             document.getElementById('attention-barcode').textContent = state.lastBarcode;
             document.getElementById('attention-text').value = '';
-            // Фокус на поле ввода для удобства
             setTimeout(() => {
                 const ta = document.getElementById('attention-text');
                 if (ta) ta.focus();
@@ -1146,7 +1126,6 @@
         }
 
         function goBackFromAttention() {
-            // Возвращаемся на экран "Готово"
             showStage('done');
         }
 
@@ -1176,7 +1155,6 @@
                 const data = await r.json();
                 if (!r.ok) throw new Error(data.error || 'Ошибка отправки');
 
-                // Обновляем последнюю запись в истории — теперь она "attention"
                 if (state.history.length > 0 && state.history[0].key === barcode) {
                     state.history[0].attention = true;
                     localStorage.setItem('history', JSON.stringify(state.history));
@@ -1199,6 +1177,7 @@
             state.videoBlob = null;
             state.chunks = [];
             state.lastBarcode = null;
+            scannerStartAttempts = 0;
             updateProgress(0, 'Подготовка...');
             document.getElementById('upload-msgs').innerHTML = '';
             const btn = document.getElementById('btn-record');
@@ -1210,9 +1189,6 @@
             renderPendingBanner();
         }
 
-        // ============================================================
-        // БАННЕР НЕСИНХРОНИЗИРОВАННЫХ
-        // ============================================================
         async function renderPendingBanner() {
             const banner = document.getElementById('pending-banner');
             try {
@@ -1312,9 +1288,6 @@
             return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
         }
 
-        // ============================================================
-        // ИСТОРИЯ
-        // ============================================================
         function addToHistory(key, mode, success, attention) {
             const item = { key, mode, success, attention: !!attention, time: new Date().toISOString() };
             state.history.unshift(item);
@@ -1350,9 +1323,6 @@
             }).join('');
         }
 
-        // ============================================================
-        // НАСТРОЙКИ
-        // ============================================================
         function toggleSettings() {
             const panel = document.getElementById('settings');
             panel.classList.toggle('open');
@@ -1397,9 +1367,6 @@
         window.addEventListener('online', updateNetStatus);
         window.addEventListener('offline', updateNetStatus);
 
-        // ============================================================
-        // ИНИЦИАЛИЗАЦИЯ
-        // ============================================================
         async function bootstrap() {
             updateNetStatus();
             applyMode(state.mode);
@@ -1412,6 +1379,7 @@
             }
 
             await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+            await new Promise(r => setTimeout(r, 300));
             goHome();
         }
 
