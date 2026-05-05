@@ -230,23 +230,27 @@
         .form-input { width: 100%; padding: 14px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 14px; }
         .form-input:focus { outline: none; border-color: var(--accent); }
 
-        .mode-radio-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
-        .mode-radio { position: relative; cursor: pointer; }
-        .mode-radio input { position: absolute; opacity: 0; pointer-events: none; }
-        .mode-radio-card { background: var(--bg); border: 2px solid var(--border); border-radius: 12px; padding: 14px 12px; text-align: center; transition: all 0.15s ease; }
-        .mode-radio input:checked + .mode-radio-card { border-color: var(--accent); background: rgba(255,107,53,0.06); }
-        .mode-radio-emoji { font-size: 22px; margin-bottom: 4px; line-height: 1; }
-        .mode-radio-name { font-size: 13px; font-weight: 700; }
-        .mode-radio-disabled .mode-radio-card { opacity: 0.4; }
-        .mode-radio-disabled .mode-radio-card::after {
-            content: 'скоро';
-            display: block;
-            font-size: 9px;
-            margin-top: 4px;
-            color: var(--text-mute);
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
+        /* Кастомный select для режима */
+        .mode-select {
+            width: 100%;
+            padding: 14px 40px 14px 16px;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            color: var(--text);
+            font-family: 'Manrope', sans-serif;
+            font-size: 16px;
+            font-weight: 600;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            cursor: pointer;
         }
+        .mode-select:focus { outline: none; border-color: var(--accent); }
+        .mode-select option { background: var(--bg-card); color: var(--text); padding: 8px; }
+        .mode-select option:disabled { color: var(--text-mute); }
 
         .manual-input-wrap { margin-top: 12px; text-align: center; }
         .manual-link { background: none; border: none; color: var(--text-dim); font-size: 13px; text-decoration: underline; cursor: pointer; }
@@ -256,12 +260,11 @@
         .check-loading { text-align: center; padding: 40px 20px; }
         .check-spinner { width: 60px; height: 60px; border: 4px solid var(--border); border-top-color: var(--accent); border-radius: 50%; margin: 0 auto 24px; animation: spin 0.8s linear infinite; }
 
-        .shipment-hero { text-align: center; padding: 20px 10px 40px; }
-        .shipment-hero-emoji { font-size: 64px; margin-bottom: 16px; }
-        .shipment-hero-date { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--text-dim); margin-bottom: 8px; }
-        .shipment-hero-title { font-size: 26px; font-weight: 800; margin-bottom: 32px; letter-spacing: -0.02em; }
+        .simple-hero { text-align: center; padding: 20px 10px 40px; }
+        .simple-hero-emoji { font-size: 64px; margin-bottom: 16px; }
+        .simple-hero-date { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--text-dim); margin-bottom: 8px; }
+        .simple-hero-title { font-size: 26px; font-weight: 800; margin-bottom: 32px; letter-spacing: -0.02em; }
 
-        /* Кнопка загрузки из медиа */
         .file-input-hidden { position: absolute; left: -9999px; opacity: 0; }
 
         .confirm-icon {
@@ -293,6 +296,7 @@
 
             <div id="pending-banner" class="hidden"></div>
 
+            <!-- РЕЖИМ: ВОЗВРАТЫ -->
             <div id="mode-return">
                 <div class="steps">
                     <div class="step" id="step-1"></div>
@@ -362,18 +366,21 @@
                 </div>
             </div>
 
-            <div id="mode-shipment" class="hidden">
-                <div id="stage-shipment-home">
-                    <div class="shipment-hero">
-                        <div class="shipment-hero-emoji">📦</div>
-                        <div class="shipment-hero-date" id="shipment-date">—</div>
-                        <div class="shipment-hero-title">Запись отгрузки</div>
-                        <button class="btn btn-success" onclick="startShipmentRecording()">🎥 Начать запись</button>
+            <!-- РЕЖИМЫ ОТГРУЗКА И ПРИЁМКА — общий «простой» главный экран -->
+            <div id="mode-simple" class="hidden">
+                <div id="stage-simple-home">
+                    <div class="simple-hero">
+                        <div class="simple-hero-emoji" id="simple-hero-emoji">📦</div>
+                        <div class="simple-hero-date" id="simple-hero-date">—</div>
+                        <div class="simple-hero-title" id="simple-hero-title">Запись отгрузки</div>
+                        <button class="btn btn-success" onclick="startSimpleRecording()">🎥 Начать запись</button>
                         <div style="height: 10px;"></div>
-                        <button class="btn btn-secondary" onclick="pickFromMediaShipment()">📁 Загрузить из медиа</button>
+                        <button class="btn btn-secondary" onclick="pickFromMediaSimple()">📁 Загрузить из медиа</button>
                     </div>
                 </div>
             </div>
+
+            <!-- ОБЩИЕ ЭТАПЫ ДЛЯ ВСЕХ РЕЖИМОВ -->
 
             <div id="stage-record" class="hidden">
                 <div class="stage-label" id="record-step-label">Шаг 2 из 3</div>
@@ -398,7 +405,6 @@
                 </div>
             </div>
 
-            <!-- Этап подтверждения файла из медиа -->
             <div id="stage-confirm-media" class="hidden">
                 <div class="confirm-icon">
                     <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
@@ -515,9 +521,8 @@
             </div>
         </div>
 
-        <!-- Скрытые input для выбора файлов -->
         <input type="file" id="file-input-record" class="file-input-hidden" accept="video/*">
-        <input type="file" id="file-input-shipment" class="file-input-hidden" accept="video/*">
+        <input type="file" id="file-input-simple" class="file-input-hidden" accept="video/*">
 
         <div class="settings-panel" id="settings">
             <div class="settings-content">
@@ -525,36 +530,13 @@
 
                 <div class="form-group">
                     <label class="form-label">Режим работы</label>
-                    <div class="mode-radio-group">
-                        <label class="mode-radio">
-                            <input type="radio" name="mode" value="return">
-                            <div class="mode-radio-card">
-                                <div class="mode-radio-emoji">↩️</div>
-                                <div class="mode-radio-name">Возврат</div>
-                            </div>
-                        </label>
-                        <label class="mode-radio">
-                            <input type="radio" name="mode" value="shipment">
-                            <div class="mode-radio-card">
-                                <div class="mode-radio-emoji">📦</div>
-                                <div class="mode-radio-name">Отгрузка</div>
-                            </div>
-                        </label>
-                        <label class="mode-radio mode-radio-disabled">
-                            <input type="radio" name="mode" value="supply" disabled>
-                            <div class="mode-radio-card">
-                                <div class="mode-radio-emoji">🚚</div>
-                                <div class="mode-radio-name">Поставка</div>
-                            </div>
-                        </label>
-                        <label class="mode-radio mode-radio-disabled">
-                            <input type="radio" name="mode" value="order" disabled>
-                            <div class="mode-radio-card">
-                                <div class="mode-radio-emoji">🛒</div>
-                                <div class="mode-radio-name">Заказ</div>
-                            </div>
-                        </label>
-                    </div>
+                    <select class="mode-select" id="mode-select">
+                        <option value="return">↩️  Возврат</option>
+                        <option value="shipment">📦  Отгрузка</option>
+                        <option value="acceptance">📥  Приёмка</option>
+                        <option value="supply" disabled>🚚  Поставка (скоро)</option>
+                        <option value="order" disabled>🛒  Заказ (скоро)</option>
+                    </select>
                 </div>
 
                 <div class="form-group">
@@ -576,7 +558,46 @@
         const DB_NAME = 'warehouse-returns';
         const DB_VERSION = 1;
         const STORE = 'pending';
-        const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500 МБ
+        const MAX_FILE_SIZE = 500 * 1024 * 1024;
+
+        // ================= ОПИСАНИЕ РЕЖИМОВ =================
+        // Чтобы добавить новый режим типа "Перемещение" — добавьте сюда строку и option в HTML.
+        const MODES = {
+            return: {
+                title: 'ВОЗВРАТЫ',
+                emoji: '↩️',
+                isReturn: true, // только этот режим со сканированием и МойСклад
+                filenamePrefix: null, // имя файла = номер возврата
+                doneTitle: 'Возврат обработан',
+                historyTitle: 'Сегодня обработано',
+                nextButtonLabel: 'Следующий возврат →',
+                heroTitle: null,
+            },
+            shipment: {
+                title: 'ОТГРУЗКА',
+                emoji: '📦',
+                isReturn: false,
+                filenamePrefix: 'Отгрузка',
+                doneTitle: 'Отгрузка обработана',
+                historyTitle: 'Сегодня записано',
+                nextButtonLabel: 'Записать ещё →',
+                heroTitle: 'Запись отгрузки',
+                heroLabel: 'Дата отгрузки',
+                uploadInfoLabel: 'Отгрузка',
+            },
+            acceptance: {
+                title: 'ПРИЁМКА',
+                emoji: '📥',
+                isReturn: false,
+                filenamePrefix: 'Приемка',
+                doneTitle: 'Приёмка записана',
+                historyTitle: 'Сегодня записано',
+                nextButtonLabel: 'Записать ещё →',
+                heroTitle: 'Запись приёмки',
+                heroLabel: 'Дата приёмки',
+                uploadInfoLabel: 'Приёмка',
+            },
+        };
 
         let dbInstance = null;
 
@@ -649,14 +670,17 @@
             scanner: null,
             currentFilename: null,
             lastBarcode: null,
-            // Для подтверждения медиафайла
             pendingMediaFile: null,
             backendUrl: localStorage.getItem('backendUrl') || '',
             apiKey: localStorage.getItem('apiKey') || '',
             history: JSON.parse(localStorage.getItem('history') || '[]'),
         };
 
-        function formatShipmentDate() {
+        function modeCfg() {
+            return MODES[state.mode] || MODES.return;
+        }
+
+        function formatDateString() {
             const d = new Date();
             const dd = String(d.getDate()).padStart(2, '0');
             const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -665,15 +689,16 @@
         }
 
         function applyMode(mode) {
+            if (!MODES[mode]) mode = 'return';
             state.mode = mode;
             localStorage.setItem('app_mode', mode);
 
-            const isReturn = mode === 'return';
-            const isShipment = mode === 'shipment';
+            const cfg = MODES[mode];
+            const isReturn = cfg.isReturn;
 
             document.getElementById('mode-return').classList.toggle('hidden', !isReturn);
-            document.getElementById('mode-shipment').classList.toggle('hidden', !isShipment);
-            document.getElementById('header-mode').textContent = isReturn ? 'ВОЗВРАТЫ' : 'ОТГРУЗКА';
+            document.getElementById('mode-simple').classList.toggle('hidden', isReturn);
+            document.getElementById('header-mode').textContent = cfg.title;
 
             if (isReturn) {
                 document.getElementById('record-step-label').textContent = 'Шаг 2 из 3';
@@ -681,31 +706,32 @@
                 document.getElementById('record-info-label').textContent = 'Номер возврата';
                 document.getElementById('upload-step-label').textContent = 'Шаг 3 из 3';
                 document.getElementById('upload-info-label').textContent = 'Номер возврата';
-                document.getElementById('done-title').textContent = 'Возврат обработан';
-                document.getElementById('history-section-title').textContent = 'Сегодня обработано';
-                document.getElementById('done-next-btn').textContent = 'Следующий возврат →';
-            } else if (isShipment) {
+            } else {
                 document.getElementById('record-step-label').textContent = '';
-                document.getElementById('record-title').textContent = 'Запись отгрузки';
-                document.getElementById('record-info-label').textContent = 'Дата отгрузки';
+                document.getElementById('record-title').textContent = cfg.heroTitle;
+                document.getElementById('record-info-label').textContent = cfg.heroLabel;
                 document.getElementById('upload-step-label').textContent = '';
-                document.getElementById('upload-info-label').textContent = 'Отгрузка';
-                document.getElementById('done-title').textContent = 'Отгрузка обработана';
-                document.getElementById('history-section-title').textContent = 'Сегодня записано';
-                document.getElementById('done-next-btn').textContent = 'Записать ещё →';
-                document.getElementById('shipment-date').textContent = formatShipmentDate().replace(/_/g, '.');
+                document.getElementById('upload-info-label').textContent = cfg.uploadInfoLabel;
+
+                document.getElementById('simple-hero-emoji').textContent = cfg.emoji;
+                document.getElementById('simple-hero-title').textContent = cfg.heroTitle;
+                document.getElementById('simple-hero-date').textContent = formatDateString().replace(/_/g, '.');
             }
+
+            document.getElementById('done-title').textContent = cfg.doneTitle;
+            document.getElementById('history-section-title').textContent = cfg.historyTitle;
+            document.getElementById('done-next-btn').textContent = cfg.nextButtonLabel;
         }
 
         function showStage(stage) {
-            ['scan','check','notfound','already','shipment-home','record','confirm-media','upload','done','attention','attention-done'].forEach(s => {
+            ['scan','check','notfound','already','simple-home','record','confirm-media','upload','done','attention','attention-done'].forEach(s => {
                 const el = document.getElementById('stage-' + s);
                 if (el) el.classList.add('hidden');
             });
             const el = document.getElementById('stage-' + stage);
             if (el) el.classList.remove('hidden');
 
-            if (state.mode === 'return') {
+            if (modeCfg().isReturn) {
                 const steps = ['step-1', 'step-2', 'step-3'];
                 steps.forEach(s => {
                     const e = document.getElementById(s);
@@ -727,18 +753,18 @@
         }
 
         function goHome() {
-            if (state.mode === 'return') {
+            if (modeCfg().isReturn) {
                 showStage('scan');
                 startScanner();
             } else {
-                document.getElementById('shipment-date').textContent = formatShipmentDate().replace(/_/g, '.');
-                showStage('shipment-home');
+                document.getElementById('simple-hero-date').textContent = formatDateString().replace(/_/g, '.');
+                showStage('simple-home');
             }
         }
 
         let scannerStartAttempts = 0;
         function startScanner() {
-            if (state.mode !== 'return') return;
+            if (!modeCfg().isReturn) return;
             if (state.scanner) {
                 stopScanner().then(() => startScanner());
                 return;
@@ -794,7 +820,7 @@
                 if (scannerStartAttempts < 8) {
                     scannerStartAttempts++;
                     setTimeout(() => {
-                        if (!state.scanner && state.mode === 'return') startScanner();
+                        if (!state.scanner && modeCfg().isReturn) startScanner();
                     }, 500);
                 }
             });
@@ -923,12 +949,13 @@
             await openCameraForRecording('Номер возврата', state.barcode);
         }
 
-        async function startShipmentRecording() {
-            const dateStr = formatShipmentDate();
-            state.recordKey = `Отгрузка_${dateStr}`;
+        async function startSimpleRecording() {
+            const cfg = modeCfg();
+            const dateStr = formatDateString();
+            state.recordKey = `${cfg.filenamePrefix}_${dateStr}`;
             state.barcode = null;
             state.currentFilename = null;
-            await openCameraForRecording('Дата отгрузки', dateStr.replace(/_/g, '.'));
+            await openCameraForRecording(cfg.heroLabel, dateStr.replace(/_/g, '.'));
         }
 
         async function openCameraForRecording(displayLabel, displayValue) {
@@ -1071,17 +1098,15 @@
         // ВЫБОР ФАЙЛА ИЗ МЕДИА
         // ============================================================
         function pickFromMediaRecord() {
-            // Кнопка из экрана записи (возврат или отгрузка после старта)
-            // recordKey и barcode уже выставлены при openCameraForRecording
             document.getElementById('file-input-record').click();
         }
 
-        function pickFromMediaShipment() {
-            // Кнопка с главного экрана отгрузки — нужно подготовить ключ
-            const dateStr = formatShipmentDate();
-            state.recordKey = `Отгрузка_${dateStr}`;
+        function pickFromMediaSimple() {
+            const cfg = modeCfg();
+            const dateStr = formatDateString();
+            state.recordKey = `${cfg.filenamePrefix}_${dateStr}`;
             state.barcode = null;
-            document.getElementById('file-input-shipment').click();
+            document.getElementById('file-input-simple').click();
         }
 
         function getFileExtension(fileName) {
@@ -1133,13 +1158,11 @@
         async function handleMediaFileSelected(file) {
             if (!file) return;
 
-            // Проверка типа
             if (!file.type || !file.type.startsWith('video/')) {
                 alert('Это не видеофайл. Пожалуйста, выберите видео.');
                 return;
             }
 
-            // Проверка размера
             if (file.size > MAX_FILE_SIZE) {
                 alert(`Файл слишком большой: ${humanSize(file.size)}.\nМаксимум: ${humanSize(MAX_FILE_SIZE)}.`);
                 return;
@@ -1147,39 +1170,33 @@
 
             state.pendingMediaFile = file;
 
-            // Заполняем экран подтверждения
             document.getElementById('confirm-filename').textContent = file.name || '—';
             document.getElementById('confirm-size').textContent = humanSize(file.size);
             document.getElementById('confirm-duration').textContent = '...';
 
+            const cfg = modeCfg();
             const targetLabel = document.getElementById('confirm-target-label');
             const targetValue = document.getElementById('confirm-target');
-            if (state.mode === 'shipment') {
-                targetLabel.textContent = 'Дата отгрузки';
-                targetValue.textContent = formatShipmentDate().replace(/_/g, '.');
-            } else {
+            if (cfg.isReturn) {
                 targetLabel.textContent = 'Номер возврата';
                 targetValue.textContent = state.barcode || '—';
+            } else {
+                targetLabel.textContent = cfg.heroLabel;
+                targetValue.textContent = formatDateString().replace(/_/g, '.');
             }
 
             showStage('confirm-media');
 
-            // Пытаемся получить длительность асинхронно
             const duration = await getVideoDuration(file);
             document.getElementById('confirm-duration').textContent = formatDuration(duration);
         }
 
         function cancelMediaPick() {
             state.pendingMediaFile = null;
-            // Возвращаемся туда, откуда пришли
-            if (state.mode === 'shipment' && !state.recordKey) {
-                showStage('shipment-home');
-            } else if (state.mode === 'shipment') {
-                // Пришли с экрана записи отгрузки — но мы туда не вернёмся, проще на главный
-                showStage('shipment-home');
-            } else {
-                // В режиме возврата возвращаемся к экрану записи
+            if (modeCfg().isReturn) {
                 showStage('record');
+            } else {
+                showStage('simple-home');
             }
         }
 
@@ -1189,13 +1206,11 @@
                 alert('Файл не выбран');
                 return;
             }
-            // Преобразуем File в Blob с правильным расширением
             const ext = getFileExtension(file.name) || 'mp4';
             state.videoBlob = file;
             state.videoBlob.fileExtension = ext;
             state.pendingMediaFile = null;
 
-            // Сохраняем в IndexedDB на случай сбоя
             try {
                 await dbPut({
                     key: state.recordKey,
@@ -1220,16 +1235,18 @@
         async function uploadVideo() {
             showStage('upload');
             const ext = state.videoBlob.fileExtension || 'mp4';
-            const filename = state.mode === 'shipment'
-                ? `${state.recordKey}.${ext}`
-                : `${state.barcode}.${ext}`;
+            const cfg = modeCfg();
+
+            const filename = cfg.isReturn
+                ? `${state.barcode}.${ext}`
+                : `${state.recordKey}.${ext}`;
             state.currentFilename = filename;
 
             const sizeMB = (state.videoBlob.size / 1024 / 1024).toFixed(1);
             document.getElementById('upload-info-label').textContent =
-                state.mode === 'shipment' ? 'Отгрузка' : 'Номер возврата';
+                cfg.isReturn ? 'Номер возврата' : cfg.uploadInfoLabel;
             document.getElementById('upload-barcode').textContent =
-                state.mode === 'shipment' ? state.recordKey.replace('Отгрузка_', '').replace(/_/g, '.') : state.barcode;
+                cfg.isReturn ? state.barcode : state.recordKey.replace(`${cfg.filenamePrefix}_`, '').replace(/_/g, '.');
             document.getElementById('upload-filename').textContent = filename;
             document.getElementById('upload-size').textContent = `${sizeMB} МБ`;
 
@@ -1314,15 +1331,15 @@
 
         function showDone() {
             showStage('done');
-            const subtitle = state.mode === 'shipment'
-                ? state.recordKey.replace('Отгрузка_', '').replace(/_/g, '.')
-                : state.barcode;
+            const cfg = modeCfg();
+            const subtitle = cfg.isReturn
+                ? state.barcode
+                : state.recordKey.replace(`${cfg.filenamePrefix}_`, '').replace(/_/g, '.');
             document.getElementById('done-barcode').textContent = subtitle;
             document.getElementById('done-icon-circle').classList.remove('attention');
-            document.getElementById('done-title').textContent =
-                state.mode === 'return' ? 'Возврат обработан' : 'Отгрузка обработана';
+            document.getElementById('done-title').textContent = cfg.doneTitle;
             const attentionBlock = document.getElementById('done-attention-block');
-            attentionBlock.classList.toggle('hidden', state.mode !== 'return');
+            attentionBlock.classList.toggle('hidden', !cfg.isReturn);
         }
 
         function goToAttentionForm() {
@@ -1483,10 +1500,10 @@
         }
 
         function retryPending(record) {
-            state.mode = record.mode || 'return';
+            state.mode = MODES[record.mode] ? record.mode : 'return';
             applyMode(state.mode);
             state.recordKey = record.key;
-            state.barcode = record.barcode || (record.mode === 'return' ? record.key : null);
+            state.barcode = record.barcode || (modeCfg().isReturn ? record.key : null);
             state.videoBlob = record.blob;
             state.videoBlob.fileExtension = record.ext || 'mp4';
             uploadVideo();
@@ -1522,12 +1539,18 @@
                 list.innerHTML = '<div style="color: var(--text-mute); font-size: 13px; padding: 8px 0;">Ещё ничего не обработано</div>';
                 return;
             }
+            const cfg = modeCfg();
             list.innerHTML = todayItems.map(i => {
                 const t = new Date(i.time);
                 const time = `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`;
-                const display = (i.mode === 'shipment')
-                    ? String(i.key).replace('Отгрузка_', '').replace(/_/g, '.')
-                    : i.key;
+                let display;
+                if (cfg.isReturn) {
+                    display = i.key;
+                } else if (cfg.filenamePrefix) {
+                    display = String(i.key).replace(`${cfg.filenamePrefix}_`, '').replace(/_/g, '.');
+                } else {
+                    display = i.key;
+                }
                 const dotClass = !i.success ? 'error' : (i.attention ? 'attention' : '');
                 return `
                     <div class="history-item">
@@ -1544,9 +1567,7 @@
             if (panel.classList.contains('open')) {
                 document.getElementById('backend-url').value = state.backendUrl;
                 document.getElementById('api-key').value = state.apiKey;
-                document.querySelectorAll('input[name="mode"]').forEach(r => {
-                    r.checked = (r.value === state.mode);
-                });
+                document.getElementById('mode-select').value = state.mode;
             }
         }
 
@@ -1554,7 +1575,7 @@
             const url = document.getElementById('backend-url').value.trim().replace(/\/$/, '');
             const key = document.getElementById('api-key').value.trim();
             if (!url) { alert('Укажите адрес сервера'); return; }
-            const selectedMode = (document.querySelector('input[name="mode"]:checked') || {}).value || 'return';
+            const selectedMode = document.getElementById('mode-select').value || 'return';
 
             const modeChanged = selectedMode !== state.mode;
             state.backendUrl = url;
@@ -1588,18 +1609,16 @@
             renderHistory();
             await renderPendingBanner();
 
-            // Подключаем file input handlers
             const fInputRecord = document.getElementById('file-input-record');
             fInputRecord.addEventListener('change', async (e) => {
                 const file = e.target.files && e.target.files[0];
-                e.target.value = ''; // сбросить, чтобы можно было выбрать тот же файл повторно
-                // Останавливаем камеру если была активна
+                e.target.value = '';
                 if (state.stream) { state.stream.getTracks().forEach(t => t.stop()); state.stream = null; }
                 await handleMediaFileSelected(file);
             });
 
-            const fInputShipment = document.getElementById('file-input-shipment');
-            fInputShipment.addEventListener('change', async (e) => {
+            const fInputSimple = document.getElementById('file-input-simple');
+            fInputSimple.addEventListener('change', async (e) => {
                 const file = e.target.files && e.target.files[0];
                 e.target.value = '';
                 await handleMediaFileSelected(file);
