@@ -260,6 +260,24 @@
         .shipment-hero-emoji { font-size: 64px; margin-bottom: 16px; }
         .shipment-hero-date { font-family: 'JetBrains Mono', monospace; font-size: 14px; color: var(--text-dim); margin-bottom: 8px; }
         .shipment-hero-title { font-size: 26px; font-weight: 800; margin-bottom: 32px; letter-spacing: -0.02em; }
+
+        /* Кнопка загрузки из медиа */
+        .file-input-hidden { position: absolute; left: -9999px; opacity: 0; }
+
+        .confirm-icon {
+            width: 80px; height: 80px; border-radius: 50%;
+            background: var(--accent);
+            display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 24px;
+            animation: pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+        .confirm-info-row {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 0; font-size: 14px;
+        }
+        .confirm-info-row + .confirm-info-row { border-top: 1px solid var(--border); }
+        .confirm-info-label { color: var(--text-dim); }
+        .confirm-info-value { font-family: 'JetBrains Mono', monospace; color: var(--text); font-weight: 500; }
     </style>
 </head>
 <body>
@@ -351,6 +369,8 @@
                         <div class="shipment-hero-date" id="shipment-date">—</div>
                         <div class="shipment-hero-title">Запись отгрузки</div>
                         <button class="btn btn-success" onclick="startShipmentRecording()">🎥 Начать запись</button>
+                        <div style="height: 10px;"></div>
+                        <button class="btn btn-secondary" onclick="pickFromMediaShipment()">📁 Загрузить из медиа</button>
                     </div>
                 </div>
             </div>
@@ -371,9 +391,44 @@
                     <div class="save-badge" id="save-badge">💾 Сохранено</div>
                 </div>
                 <button class="btn btn-primary" id="btn-record" onclick="toggleRecording()">🎥 Начать запись</button>
+                <div style="height: 10px;"></div>
+                <button class="btn btn-secondary" id="btn-pick-media" onclick="pickFromMediaRecord()">📁 Загрузить из медиа</button>
                 <div style="margin-top: 12px;">
                     <button class="btn btn-secondary" onclick="cancelAndGoHome()">← Назад</button>
                 </div>
+            </div>
+
+            <!-- Этап подтверждения файла из медиа -->
+            <div id="stage-confirm-media" class="hidden">
+                <div class="confirm-icon">
+                    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                </div>
+                <div class="done-title" style="text-align:center;">Загрузить это видео?</div>
+                <div class="done-subtitle" style="text-align:center;">Проверьте информацию о файле перед отправкой.</div>
+                <div class="card">
+                    <div class="confirm-info-row">
+                        <span class="confirm-info-label">Имя файла</span>
+                        <span class="confirm-info-value" id="confirm-filename">—</span>
+                    </div>
+                    <div class="confirm-info-row">
+                        <span class="confirm-info-label">Размер</span>
+                        <span class="confirm-info-value" id="confirm-size">—</span>
+                    </div>
+                    <div class="confirm-info-row">
+                        <span class="confirm-info-label">Длительность</span>
+                        <span class="confirm-info-value" id="confirm-duration">—</span>
+                    </div>
+                    <div class="confirm-info-row">
+                        <span class="confirm-info-label" id="confirm-target-label">Номер возврата</span>
+                        <span class="confirm-info-value" id="confirm-target">—</span>
+                    </div>
+                </div>
+                <button class="btn btn-success" onclick="confirmMediaUpload()">✓ Загрузить</button>
+                <div style="height: 10px;"></div>
+                <button class="btn btn-secondary" onclick="cancelMediaPick()">← Выбрать другой</button>
             </div>
 
             <div id="stage-upload" class="hidden">
@@ -460,6 +515,10 @@
             </div>
         </div>
 
+        <!-- Скрытые input для выбора файлов -->
+        <input type="file" id="file-input-record" class="file-input-hidden" accept="video/*">
+        <input type="file" id="file-input-shipment" class="file-input-hidden" accept="video/*">
+
         <div class="settings-panel" id="settings">
             <div class="settings-content">
                 <div class="settings-title">Настройки</div>
@@ -517,6 +576,7 @@
         const DB_NAME = 'warehouse-returns';
         const DB_VERSION = 1;
         const STORE = 'pending';
+        const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500 МБ
 
         let dbInstance = null;
 
@@ -589,6 +649,8 @@
             scanner: null,
             currentFilename: null,
             lastBarcode: null,
+            // Для подтверждения медиафайла
+            pendingMediaFile: null,
             backendUrl: localStorage.getItem('backendUrl') || '',
             apiKey: localStorage.getItem('apiKey') || '',
             history: JSON.parse(localStorage.getItem('history') || '[]'),
@@ -636,7 +698,7 @@
         }
 
         function showStage(stage) {
-            ['scan','check','notfound','already','shipment-home','record','upload','done','attention','attention-done'].forEach(s => {
+            ['scan','check','notfound','already','shipment-home','record','confirm-media','upload','done','attention','attention-done'].forEach(s => {
                 const el = document.getElementById('stage-' + s);
                 if (el) el.classList.add('hidden');
             });
@@ -651,7 +713,7 @@
                 });
                 if (['scan','check','notfound','already'].includes(stage)) {
                     document.getElementById('step-1').classList.add('active');
-                } else if (stage === 'record') {
+                } else if (stage === 'record' || stage === 'confirm-media') {
                     document.getElementById('step-1').classList.add('done');
                     document.getElementById('step-2').classList.add('active');
                 } else if (stage === 'upload') {
@@ -984,6 +1046,7 @@
             state.barcode = null;
             state.recordKey = null;
             state.videoBlob = null;
+            state.pendingMediaFile = null;
             scannerStartAttempts = 0;
             showStage('scan');
             await new Promise(r => setTimeout(r, 200));
@@ -997,12 +1060,163 @@
             state.barcode = null;
             state.recordKey = null;
             state.videoBlob = null;
+            state.pendingMediaFile = null;
             scannerStartAttempts = 0;
             await new Promise(r => setTimeout(r, 200));
             goHome();
             renderPendingBanner();
         }
 
+        // ============================================================
+        // ВЫБОР ФАЙЛА ИЗ МЕДИА
+        // ============================================================
+        function pickFromMediaRecord() {
+            // Кнопка из экрана записи (возврат или отгрузка после старта)
+            // recordKey и barcode уже выставлены при openCameraForRecording
+            document.getElementById('file-input-record').click();
+        }
+
+        function pickFromMediaShipment() {
+            // Кнопка с главного экрана отгрузки — нужно подготовить ключ
+            const dateStr = formatShipmentDate();
+            state.recordKey = `Отгрузка_${dateStr}`;
+            state.barcode = null;
+            document.getElementById('file-input-shipment').click();
+        }
+
+        function getFileExtension(fileName) {
+            const m = String(fileName || '').match(/\.([a-z0-9]+)$/i);
+            return m ? m[1].toLowerCase() : 'mp4';
+        }
+
+        function humanSize(bytes) {
+            if (bytes < 1024) return bytes + ' Б';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' КБ';
+            if (bytes < 1024 * 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + ' МБ';
+            return (bytes / 1024 / 1024 / 1024).toFixed(2) + ' ГБ';
+        }
+
+        function getVideoDuration(file) {
+            return new Promise((resolve) => {
+                try {
+                    const url = URL.createObjectURL(file);
+                    const video = document.createElement('video');
+                    video.preload = 'metadata';
+                    video.muted = true;
+                    let resolved = false;
+                    const finish = (val) => {
+                        if (resolved) return;
+                        resolved = true;
+                        URL.revokeObjectURL(url);
+                        resolve(val);
+                    };
+                    video.onloadedmetadata = () => {
+                        const dur = video.duration;
+                        if (isFinite(dur) && dur > 0) finish(dur);
+                        else finish(null);
+                    };
+                    video.onerror = () => finish(null);
+                    setTimeout(() => finish(null), 3000);
+                    video.src = url;
+                } catch (e) { resolve(null); }
+            });
+        }
+
+        function formatDuration(seconds) {
+            if (seconds == null) return '—';
+            const total = Math.round(seconds);
+            const m = Math.floor(total / 60);
+            const s = total % 60;
+            return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+        }
+
+        async function handleMediaFileSelected(file) {
+            if (!file) return;
+
+            // Проверка типа
+            if (!file.type || !file.type.startsWith('video/')) {
+                alert('Это не видеофайл. Пожалуйста, выберите видео.');
+                return;
+            }
+
+            // Проверка размера
+            if (file.size > MAX_FILE_SIZE) {
+                alert(`Файл слишком большой: ${humanSize(file.size)}.\nМаксимум: ${humanSize(MAX_FILE_SIZE)}.`);
+                return;
+            }
+
+            state.pendingMediaFile = file;
+
+            // Заполняем экран подтверждения
+            document.getElementById('confirm-filename').textContent = file.name || '—';
+            document.getElementById('confirm-size').textContent = humanSize(file.size);
+            document.getElementById('confirm-duration').textContent = '...';
+
+            const targetLabel = document.getElementById('confirm-target-label');
+            const targetValue = document.getElementById('confirm-target');
+            if (state.mode === 'shipment') {
+                targetLabel.textContent = 'Дата отгрузки';
+                targetValue.textContent = formatShipmentDate().replace(/_/g, '.');
+            } else {
+                targetLabel.textContent = 'Номер возврата';
+                targetValue.textContent = state.barcode || '—';
+            }
+
+            showStage('confirm-media');
+
+            // Пытаемся получить длительность асинхронно
+            const duration = await getVideoDuration(file);
+            document.getElementById('confirm-duration').textContent = formatDuration(duration);
+        }
+
+        function cancelMediaPick() {
+            state.pendingMediaFile = null;
+            // Возвращаемся туда, откуда пришли
+            if (state.mode === 'shipment' && !state.recordKey) {
+                showStage('shipment-home');
+            } else if (state.mode === 'shipment') {
+                // Пришли с экрана записи отгрузки — но мы туда не вернёмся, проще на главный
+                showStage('shipment-home');
+            } else {
+                // В режиме возврата возвращаемся к экрану записи
+                showStage('record');
+            }
+        }
+
+        async function confirmMediaUpload() {
+            const file = state.pendingMediaFile;
+            if (!file) {
+                alert('Файл не выбран');
+                return;
+            }
+            // Преобразуем File в Blob с правильным расширением
+            const ext = getFileExtension(file.name) || 'mp4';
+            state.videoBlob = file;
+            state.videoBlob.fileExtension = ext;
+            state.pendingMediaFile = null;
+
+            // Сохраняем в IndexedDB на случай сбоя
+            try {
+                await dbPut({
+                    key: state.recordKey,
+                    mode: state.mode,
+                    barcode: state.barcode,
+                    blob: file,
+                    mimeType: file.type || 'video/mp4',
+                    ext: ext,
+                    savedAt: Date.now(),
+                    finalized: true,
+                });
+            } catch (e) {
+                console.warn('Не удалось сохранить в IndexedDB:', e);
+            }
+
+            uploadVideo();
+        }
+
+        // ============================================================
+        // ЗАГРУЗКА
+        // ============================================================
         async function uploadVideo() {
             showStage('upload');
             const ext = state.videoBlob.fileExtension || 'mp4';
@@ -1050,7 +1264,7 @@
                 const xhr = new XMLHttpRequest();
                 xhr.open('POST', state.backendUrl + '/api/process-return');
                 if (state.apiKey) xhr.setRequestHeader('X-API-Key', state.apiKey);
-                xhr.timeout = 5 * 60 * 1000;
+                xhr.timeout = 10 * 60 * 1000;
                 xhr.upload.onprogress = (e) => {
                     if (e.lengthComputable) {
                         const percent = Math.round((e.loaded / e.total) * 90);
@@ -1177,6 +1391,7 @@
             state.videoBlob = null;
             state.chunks = [];
             state.lastBarcode = null;
+            state.pendingMediaFile = null;
             scannerStartAttempts = 0;
             updateProgress(0, 'Подготовка...');
             document.getElementById('upload-msgs').innerHTML = '';
@@ -1372,6 +1587,23 @@
             applyMode(state.mode);
             renderHistory();
             await renderPendingBanner();
+
+            // Подключаем file input handlers
+            const fInputRecord = document.getElementById('file-input-record');
+            fInputRecord.addEventListener('change', async (e) => {
+                const file = e.target.files && e.target.files[0];
+                e.target.value = ''; // сбросить, чтобы можно было выбрать тот же файл повторно
+                // Останавливаем камеру если была активна
+                if (state.stream) { state.stream.getTracks().forEach(t => t.stop()); state.stream = null; }
+                await handleMediaFileSelected(file);
+            });
+
+            const fInputShipment = document.getElementById('file-input-shipment');
+            fInputShipment.addEventListener('change', async (e) => {
+                const file = e.target.files && e.target.files[0];
+                e.target.value = '';
+                await handleMediaFileSelected(file);
+            });
 
             if (!state.backendUrl) {
                 toggleSettings();
