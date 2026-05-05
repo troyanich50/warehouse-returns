@@ -11,13 +11,21 @@ function authHeaders(token) {
   };
 }
 
-async function ensureFolder(token, folder) {
-  const url = `${API}/resources?path=${encodeURIComponent(folder)}`;
-  const r = await fetch(url, { method: 'PUT', headers: authHeaders(token) });
-  if (r.status === 201 || r.status === 409) return;
-  if (!r.ok) {
-    const text = await r.text();
-    throw new Error(`Не удалось создать папку "${folder}": ${r.status} ${text}`);
+// Создаём папку. Если несколько уровней (например "Видео склад/Возвраты") — создаём по очереди.
+async function ensureFolder(token, folderPath) {
+  // folderPath начинается с / и не имеет завершающего /
+  // Разбиваем на части и создаём от корня вглубь.
+  const parts = folderPath.replace(/^\/+/, '').split('/').filter(Boolean);
+  let current = '';
+  for (const part of parts) {
+    current = current ? `${current}/${part}` : part;
+    const url = `${API}/resources?path=${encodeURIComponent('/' + current)}`;
+    const r = await fetch(url, { method: 'PUT', headers: authHeaders(token) });
+    if (r.status === 201 || r.status === 409) continue;
+    if (!r.ok) {
+      const text = await r.text();
+      throw new Error(`Не удалось создать папку "/${current}": ${r.status} ${text}`);
+    }
   }
 }
 
@@ -30,16 +38,10 @@ async function resourceExists(token, remotePath) {
   throw new Error(`Не удалось проверить существование файла: ${r.status} ${text}`);
 }
 
-/**
- * Подобрать уникальное имя файла, перебирая суффиксы.
- * @param {string} suffixStrategy — 'new' (для возвратов: name_new, name_new_2)
- *                                  или 'numeric' (для отгрузок: name_1, name_2)
- */
 async function resolveUniqueName(token, folderPath, baseName, suffixStrategy = 'new') {
   const ext = path.extname(baseName);
   const stem = baseName.slice(0, baseName.length - ext.length);
 
-  // 1. Пробуем оригинальное имя
   let candidate = baseName;
   let candidatePath = `${folderPath}/${candidate}`;
   if (!(await resourceExists(token, candidatePath))) {
@@ -47,7 +49,6 @@ async function resolveUniqueName(token, folderPath, baseName, suffixStrategy = '
   }
 
   if (suffixStrategy === 'numeric') {
-    // Стратегия для отгрузок: name_1, name_2, ...
     for (let i = 1; i <= 100; i++) {
       candidate = `${stem}_${i}${ext}`;
       candidatePath = `${folderPath}/${candidate}`;
@@ -56,7 +57,6 @@ async function resolveUniqueName(token, folderPath, baseName, suffixStrategy = '
       }
     }
   } else {
-    // Стратегия по умолчанию для возвратов: name_new, name_new_2, ...
     candidate = `${stem}_new${ext}`;
     candidatePath = `${folderPath}/${candidate}`;
     if (!(await resourceExists(token, candidatePath))) {
@@ -122,6 +122,11 @@ async function getResourceMeta(token, remotePath) {
 export async function uploadToYandexDisk({ token, folder, remoteName, localPath, suffixStrategy }) {
   if (!token) throw new Error('Не указан YANDEX_DISK_TOKEN');
 
+  // folder может быть:
+  //   "Возвраты"
+  //   "Видео склад/Возвраты"
+  //   "/Видео склад/Возвраты"
+  // Нормализуем — убираем ведущие/конечные слэши, потом добавляем один в начало.
   const cleanFolder = String(folder || '').replace(/^\/+|\/+$/g, '');
   const folderPath = cleanFolder ? `/${cleanFolder}` : '';
 
