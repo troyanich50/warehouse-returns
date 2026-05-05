@@ -1,4 +1,4 @@
-// СКЛАД · ВОЗВРАТЫ — Бэкенд (с поддержкой режимов и статусов)
+// СКЛАД · ВОЗВРАТЫ — Бэкенд (с поддержкой нескольких режимов и статусов)
 
 import 'dotenv/config';
 import express from 'express';
@@ -48,9 +48,18 @@ const upload = multer({
 const FIELD_NAME = process.env.MOYSKLAD_VIDEO_FIELD_NAME || 'Видео';
 const RETURNS_FOLDER = process.env.YANDEX_DISK_FOLDER || 'Returns';
 const SHIPMENT_FOLDER = process.env.YANDEX_DISK_SHIPMENT_FOLDER || 'Shipments';
+const ACCEPTANCE_FOLDER = process.env.YANDEX_DISK_ACCEPTANCE_FOLDER || 'Приемка';
 
 const STATUS_UNPACKED = 'Распакован';
 const STATUS_ATTENTION = 'Требует внимания';
+
+// Карта режимов: какой папкой пользоваться + стратегия именования.
+// Режимы 'shipment' и 'acceptance' одинаковы по поведению — просто разные папки.
+const MODE_CONFIG = {
+  return:     { folder: RETURNS_FOLDER,    suffix: 'new',     touchesMoysklad: true  },
+  shipment:   { folder: SHIPMENT_FOLDER,   suffix: 'numeric', touchesMoysklad: false },
+  acceptance: { folder: ACCEPTANCE_FOLDER, suffix: 'numeric', touchesMoysklad: false },
+};
 
 // ---------- Health ----------
 app.get('/api/health', (req, res) => {
@@ -60,6 +69,7 @@ app.get('/api/health', (req, res) => {
     moysklad: !!process.env.MOYSKLAD_TOKEN,
     folder_returns: RETURNS_FOLDER,
     folder_shipments: SHIPMENT_FOLDER,
+    folder_acceptance: ACCEPTANCE_FOLDER,
     field: FIELD_NAME,
   });
 });
@@ -112,7 +122,7 @@ app.post('/api/create-return', async (req, res) => {
   }
 });
 
-// ---------- НОВЫЙ: пометка возврата как "Требует внимания" ----------
+// ---------- Пометка возврата как "Требует внимания" ----------
 app.post('/api/mark-attention', async (req, res) => {
   const barcode = (req.body && req.body.barcode || '').trim();
   const comment = (req.body && req.body.comment || '').trim();
@@ -159,46 +169,48 @@ async function handleUpload(req, res) {
     return res.status(500).json({ success: false, error: 'Не настроен YANDEX_DISK_TOKEN' });
   }
 
-  let folder, suffixStrategy, remoteName;
+  const cfg = MODE_CONFIG[mode];
+  if (!cfg) {
+    cleanup(file.path);
+    return res.status(400).json({ success: false, error: `Неизвестный режим: ${mode}` });
+  }
 
-  if (mode === 'shipment') {
-    folder = SHIPMENT_FOLDER;
-    suffixStrategy = 'numeric';
-    if (filenameFromClient) {
-      remoteName = filenameFromClient;
-    } else {
-      const ext = path.extname(file.originalname) || '.mp4';
-      remoteName = `Shipment${ext}`;
-    }
-  } else {
+  let remoteName;
+  if (mode === 'return') {
     if (!barcode) {
       cleanup(file.path);
       return res.status(400).json({ success: false, error: 'Не указан штрихкод' });
     }
-    folder = RETURNS_FOLDER;
-    suffixStrategy = 'new';
     if (filenameFromClient && filenameFromClient.startsWith(barcode)) {
       remoteName = filenameFromClient;
     } else {
       const ext = path.extname(file.originalname) || '.mp4';
       remoteName = `${barcode}${ext}`;
     }
+  } else {
+    // shipment / acceptance — имя приходит от клиента (Отгрузка_DD_MM_YYYY.mp4 или Приемка_DD_MM_YYYY.mp4)
+    if (filenameFromClient) {
+      remoteName = filenameFromClient;
+    } else {
+      const ext = path.extname(file.originalname) || '.mp4';
+      remoteName = `Video${ext}`;
+    }
   }
 
   let warning = null;
 
   try {
-    console.log(`  → Yandex Disk: uploading to /${folder}/${remoteName}...`);
+    console.log(`  → Yandex Disk: uploading to /${cfg.folder}/${remoteName}...`);
     const link = await uploadToYandexDisk({
       token: process.env.YANDEX_DISK_TOKEN,
-      folder,
+      folder: cfg.folder,
       remoteName,
       localPath: file.path,
-      suffixStrategy,
+      suffixStrategy: cfg.suffix,
     });
     console.log(`  ✓ Yandex Disk: ${link}`);
 
-    if (mode === 'return' && process.env.MOYSKLAD_TOKEN) {
+    if (cfg.touchesMoysklad && process.env.MOYSKLAD_TOKEN) {
       try {
         console.log('  → МойСклад: updating return...');
         await updateReturnVideoField({
@@ -242,7 +254,8 @@ app.listen(PORT, () => {
   console.log(`  Port:        ${PORT}`);
   console.log(`  Yandex.Disk: ${process.env.YANDEX_DISK_TOKEN ? '✓' : '✗ MISSING'}`);
   console.log(`  МойСклад:    ${process.env.MOYSKLAD_TOKEN ? '✓' : '✗ MISSING'}`);
-  console.log(`  Returns folder:   ${RETURNS_FOLDER}`);
-  console.log(`  Shipments folder: ${SHIPMENT_FOLDER}`);
+  console.log(`  Returns folder:    ${RETURNS_FOLDER}`);
+  console.log(`  Shipments folder:  ${SHIPMENT_FOLDER}`);
+  console.log(`  Acceptance folder: ${ACCEPTANCE_FOLDER}`);
   console.log('============================================================');
 });
