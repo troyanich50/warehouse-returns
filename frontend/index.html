@@ -230,7 +230,6 @@
         .form-input { width: 100%; padding: 14px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'JetBrains Mono', monospace; font-size: 14px; }
         .form-input:focus { outline: none; border-color: var(--accent); }
 
-        /* Кастомный select для режима */
         .mode-select {
             width: 100%;
             padding: 14px 40px 14px 16px;
@@ -296,7 +295,6 @@
 
             <div id="pending-banner" class="hidden"></div>
 
-            <!-- РЕЖИМ: ВОЗВРАТЫ -->
             <div id="mode-return">
                 <div class="steps">
                     <div class="step" id="step-1"></div>
@@ -366,7 +364,6 @@
                 </div>
             </div>
 
-            <!-- РЕЖИМЫ ОТГРУЗКА И ПРИЁМКА — общий «простой» главный экран -->
             <div id="mode-simple" class="hidden">
                 <div id="stage-simple-home">
                     <div class="simple-hero">
@@ -379,8 +376,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- ОБЩИЕ ЭТАПЫ ДЛЯ ВСЕХ РЕЖИМОВ -->
 
             <div id="stage-record" class="hidden">
                 <div class="stage-label" id="record-step-label">Шаг 2 из 3</div>
@@ -560,14 +555,12 @@
         const STORE = 'pending';
         const MAX_FILE_SIZE = 500 * 1024 * 1024;
 
-        // ================= ОПИСАНИЕ РЕЖИМОВ =================
-        // Чтобы добавить новый режим типа "Перемещение" — добавьте сюда строку и option в HTML.
         const MODES = {
             return: {
                 title: 'ВОЗВРАТЫ',
                 emoji: '↩️',
-                isReturn: true, // только этот режим со сканированием и МойСклад
-                filenamePrefix: null, // имя файла = номер возврата
+                isReturn: true,
+                filenamePrefix: null,
                 doneTitle: 'Возврат обработан',
                 historyTitle: 'Сегодня обработано',
                 nextButtonLabel: 'Следующий возврат →',
@@ -1094,9 +1087,6 @@
             renderPendingBanner();
         }
 
-        // ============================================================
-        // ВЫБОР ФАЙЛА ИЗ МЕДИА
-        // ============================================================
         function pickFromMediaRecord() {
             document.getElementById('file-input-record').click();
         }
@@ -1232,6 +1222,28 @@
         // ============================================================
         // ЗАГРУЗКА
         // ============================================================
+
+        // Перед запуском (или повтором) загрузки для возврата —
+        // проверяем, не загружено ли видео уже (вдруг прошлая попытка дошла до сервера).
+        async function checkIfAlreadyUploaded() {
+            if (!modeCfg().isReturn) return false;
+            if (!state.barcode) return false;
+            if (!state.backendUrl) return false;
+
+            try {
+                const r = await fetch(state.backendUrl + '/api/check-barcode', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ barcode: state.barcode })
+                });
+                if (!r.ok) return false;
+                const data = await r.json();
+                return data.status === 'has_video';
+            } catch (e) {
+                return false;
+            }
+        }
+
         async function uploadVideo() {
             showStage('upload');
             const ext = state.videoBlob.fileExtension || 'mp4';
@@ -1249,10 +1261,28 @@
                 cfg.isReturn ? state.barcode : state.recordKey.replace(`${cfg.filenamePrefix}_`, '').replace(/_/g, '.');
             document.getElementById('upload-filename').textContent = filename;
             document.getElementById('upload-size').textContent = `${sizeMB} МБ`;
+            document.getElementById('upload-msgs').innerHTML = '';
 
             if (!state.backendUrl) {
                 showUploadError('Не настроен сервер. Откройте настройки (⚙).');
                 return;
+            }
+
+            // Для возвратов — сначала проверяем, не загружено ли уже
+            if (cfg.isReturn) {
+                updateProgress(5, 'Проверяем что произошло...');
+                const alreadyUploaded = await checkIfAlreadyUploaded();
+                if (alreadyUploaded) {
+                    // Видео уже на сервере — значит прошлая попытка дошла.
+                    // Удаляем из памяти и показываем "Готово".
+                    updateProgress(100, 'Готово');
+                    try { await dbDelete(state.recordKey); } catch {}
+                    addToHistory(state.recordKey, state.mode, true, false);
+                    state.lastBarcode = state.barcode;
+                    showDone();
+                    renderPendingBanner();
+                    return;
+                }
             }
 
             const formData = new FormData();
@@ -1271,6 +1301,20 @@
                 showDone();
                 renderPendingBanner();
             } catch (err) {
+                // Если запрос упал по сети — есть шанс что видео всё равно дошло.
+                // Перепроверим один раз перед тем как показать ошибку.
+                if (cfg.isReturn) {
+                    const reallyUploaded = await checkIfAlreadyUploaded();
+                    if (reallyUploaded) {
+                        updateProgress(100, 'Готово');
+                        try { await dbDelete(state.recordKey); } catch {}
+                        addToHistory(state.recordKey, state.mode, true, false);
+                        state.lastBarcode = state.barcode;
+                        showDone();
+                        renderPendingBanner();
+                        return;
+                    }
+                }
                 showUploadError(err.message || String(err));
                 addToHistory(state.recordKey, state.mode, false, false);
             }
